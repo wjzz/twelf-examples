@@ -1,0 +1,32 @@
+nat : type.
+
+z : nat.
+s : nat -> nat.
+
+add : nat -> nat -> nat -> type.
+
+%mode (add +M +N -P).
+
+add/z
+   : add z N N.
+
+add/s
+   : add (s M) N (s P)
+      <- add M N P.
+
+%worlds () (add _ _ _).
+%total M (add M _ _).
+
+%%------------
+
+
+add_zero_r : add N z N -> type.
+
+add_zero_r/z
+   : add_zero_r z
+      <- add/z z.
+
+
+add_comm : add N M P -> add M N P -> type.
+
+

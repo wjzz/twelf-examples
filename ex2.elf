@@ -1,0 +1,75 @@
+%% POPL 2009 tutorial
+%%
+%% Properties of natural number addition
+
+nat : type.
+
+zero : nat.
+succ : nat -> nat.
+
+1 : nat = succ zero.
+2 : nat = succ 1.
+
+plus : nat -> nat -> nat -> type.
+
+plus/z : plus zero M M.
+
+plus/s : plus (succ N) M (succ P) <- plus N M P.
+
+%mode plus +N +M -P.
+%worlds() (plus _ _ _).            % work on closed terms
+%total M (plus M _ _).
+
+% examples
+
+plus_0_0_0 : plus zero zero zero = plus/z.
+plus_1_0_1 : plus 1 zero 1 = plus/s plus/z.
+plus_2_0_2 : plus 2 zero 2 = plus/s plus_1_0_1.
+
+% inductive proof of the fact that
+% N + 0 = N
+
+rhzero : {m : nat} plus m zero m -> type.
+
+thm1_z : rhzero zero plus/z.
+thm2_s : rhzero (succ N) (plus/s D)
+	  <- rhzero N D.
+
+%mode rhzero +M -D.
+%worlds() (rhzero _ _).
+%total M (rhzero M _).
+
+% inductive proof of the fact that
+% plus A B C ==> plus A (suc B) (suc C)
+
+rhsuc : {m:nat}{n:nat}{p:nat} plus m n p -> plus m (succ n) (succ p) -> type.
+
+rhsuc/z : rhsuc zero N N plus/z plus/z.
+
+rhsuc/s : rhsuc (succ M) N (succ P) (plus/s D1) (plus/s D2)
+       <- rhsuc M N P D1 D2.
+
+%mode rhsuc +M +N +P +D1 -D2.
+%worlds() (rhsuc _ _ _ _ _).
+%total M (rhsuc M _ _ _ _).
+
+% N + M == M + N
+% N + M = P ==> M + N = P
+
+% der1: 0 N N   ---> rhzero N
+% der2: (suc M) N (suc P) <-- M N P
+%        N M P -> N (suc M) (suc P)
+% lemma (plus A B C) ==> (plus A (suc B) (suc C))
+
+plus_comm : {m:nat} {n:nat} {p:nat} plus m n p -> plus n m p -> type.
+
+plus_comm/z : plus_comm zero N N plus/z D
+	       <- rhzero N D.
+
+plus_comm/s : plus_comm (succ M) N (succ P) (plus/s D) D3
+	       <- plus_comm M N P D D2
+	       <- rhsuc N M P D2 D3.
+
+%mode plus_comm +M +N +P +D1 -D2.
+%worlds() (plus_comm _ _ _ _ _).
+%total D (plus_comm _ _ _ D _).
