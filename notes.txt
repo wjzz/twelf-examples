@@ -1,0 +1,8 @@
+Load configuration
+C-c C-c
+
+Check file
+C-c C-s
+
+Syntax highlighting for the whole file
+C-c l
