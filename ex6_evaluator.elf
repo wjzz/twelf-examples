@@ -1,0 +1,45 @@
+tm : type.
+
+z : tm.
+s : tm -> tm.
+app : tm -> tm -> tm.
+lam : (tm -> tm) -> tm.
+
+%%----------------------------------------
+%% Evaluator (denotational semantics)
+%%----------------------------------------
+
+%% Values
+
+val : tm -> type.
+
+val/z : val z.
+val/s : val (s N) <- val N.
+val/lam : {F : tm -> tm} val (lam F).
+
+value : type.
+value/v : val T -> value.
+
+%% The evaluation function
+
+eval : tm -> value -> type.
+%mode eval +T -V.
+
+- : eval z (value/v val/z).
+
+- : eval (s N) (value/v (val/s V)) <- eval N (value/v V).
+
+- : eval (lam F) (value/v (val/lam F)).
+
+- : eval (app E1 E2) V2
+     <- eval E1 (value/v (val/lam F))
+     <- eval E2 (value/v (V : val TV))
+     <- eval (F TV) V2.       %% this call violates structural induction
+
+%worlds () (eval _ _).
+%% %total T (eval T _).  %% this doesn't work of course, see above
+
+%% unit tests
+%solve E : eval z (value/v V).
+%solve E : eval (s z) (value/v V).
+%solve E : eval (s (s (s (s z)))) (value/v V).
