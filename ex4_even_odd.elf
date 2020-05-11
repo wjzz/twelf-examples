@@ -1,0 +1,103 @@
+nat : type.
+z : nat.
+s : nat -> nat.
+
+%%---------------------------
+%% Even & Odd
+%%---------------------------
+
+even : nat -> type.
+odd  : nat -> type.
+
+ev/z : even z.
+
+ev/od : even (s N) <- odd N.
+od/ev : odd (s N) <- even N.
+
+%mode (even +N) (odd +N).
+
+%%---------------------------
+%% Every number is either even or odd
+%%---------------------------
+
+even_or_odd : nat -> type.
+
+even_or_odd/ev : even_or_odd N <- even N.
+even_or_odd/od : even_or_odd N <- odd N.
+
+all_ev_or_od_lem : even_or_odd N -> even_or_odd (s N) -> type.
+%mode all_ev_or_od_lem +D1 -D2.
+
+- : all_ev_or_od_lem (even_or_odd/ev E) (even_or_odd/od (od/ev E)).
+- : all_ev_or_od_lem (even_or_odd/od O) (even_or_odd/ev (ev/od O)).
+
+%worlds () (all_ev_or_od_lem _ _).
+%total {} (all_ev_or_od_lem _ _).
+
+all_ev_or_od : {n : nat} even_or_odd n -> type.
+%mode all_ev_or_od +N -D.
+
+all_ev_or_od/z : all_ev_or_od z (even_or_odd/ev ev/z). 
+
+all_ev_or_od/s : all_ev_or_od (s N) D2
+		  <- all_ev_or_od N D1
+		  <- all_ev_or_od_lem D1 D2.
+		  
+%worlds () (all_ev_or_od _ _).
+%total N (all_ev_or_od N _).
+
+%%------------------------------------
+%% Zero is not odd
+%%------------------------------------
+
+false : type.
+%worlds () (false).
+
+%% False elimination
+falso : {P: nat} odd z -> even P -> type.
+%mode falso +P +D1 -D2.
+
+%worlds () (falso _ _ _).
+%total {} (falso _ _ _).
+
+%%------------------------------------
+%% ev N -> ev (s (s N))
+%%------------------------------------
+
+ev_ss : even N -> even (s (s N)) -> type.
+%mode ev_ss +D1 -D2.
+
+- : ev_ss E (ev/od (od/ev E)).
+
+%worlds () (ev_ss _ _).
+%total {} (ev_ss _ _).
+
+%%------------------------------------
+%% ev N -> ev M -> ev (N + M)
+%%------------------------------------
+
+plus : nat -> nat -> nat -> type.
+
+plus/z : plus z M M.
+
+plus/s : plus (s N) M (s P) <- plus N M P.
+
+%mode plus +N +M -P.
+%worlds() (plus _ _ _). 
+%total M (plus M _ _).
+
+%%----------------------------------
+
+ev_plus : even N -> even M -> plus N M P -> even P -> type.
+
+- : ev_plus ev/z E2 plus/z E2.
+
+- : ev_plus (ev/od F) _ (_ : plus _ _ P) D
+     <- falso P F D.
+
+- : ev_plus (ev/od (od/ev E1)) E2 (plus/s (plus/s PL)) (ev/od (od/ev E3))
+     <- ev_plus E1 E2 PL E3.
+
+%mode ev_plus +E1 +E2 +PL -E3.
+%worlds () (ev_plus _ _ _ _).
+%total E1 (ev_plus E1 _ _ _).
