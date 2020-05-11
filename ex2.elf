@@ -73,4 +73,3 @@ plus_comm/s : plus_comm (succ M) N (succ P) (plus/s D) D3
 %mode plus_comm +M +N +P +D1 -D2.
 %worlds() (plus_comm _ _ _ _ _).
 %total D (plus_comm _ _ _ D _).
-

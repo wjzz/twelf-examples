@@ -1,0 +1,317 @@
+%%----------------------------
+
+tp : type.
+
+num : tp.
+arr : tp -> tp -> tp.
+
+%%----------------------------
+
+exp : type.
+ 
+z : exp. 
+fun : tp -> (exp -> exp) -> exp.
+app : exp -> exp -> exp.
+
+%%------------------------------
+
+%% static semantics
+
+of : exp -> tp -> type.
+%mode of +E -T.
+
+of/z : of z num.
+
+of/fun : of (fun T1 F) (arr T1 T2)
+	  <- ({x: exp} of x T1 -> of (F x) T2).
+
+of/app : of (app E1 E2) T2
+	  <- of E2 T1
+	  <- of E1 (arr T1 T2).
+
+%block of_block : some {T:tp} block {x:exp} {dx: of x T}.
+%worlds (of_block) (of _ _).
+
+%%------------------------------
+
+%% dynamic semantics
+
+val : exp -> type.
+
+val/fun : val (fun T FN).
+
+val/z : val z.
+
+%mode val +E.
+%worlds (of_block) (val _).
+%terminates {} (val _).
+
+%%--------------------------------
+
+step : exp -> exp -> type.
+
+step/app/fn : step (app E1 E2) (app E1' E2)
+	       <- step E1 E1'.
+
+step/app/arg : step (app E1 E2) (app E1 E2')
+		<- val E1
+		<- step E2 E2'.
+
+step/app/beta : step (app (fun _ E1) E2) (E1 E2)
+		 <- val E2.
+
+%mode step +E1 -E2.
+%worlds (of_block) (step _ _).
+
+
+%%--------------------------------------
+
+%% progress theorem
+
+prog : exp -> type.
+prog/val : prog E <- val E.
+prog/step : prog E <- step E E'.
+
+%mode prog +D.
+%worlds () (prog _).
+
+%% inversion lemmas
+
+lem-prog-app : of E1 (arr T1 T2) -> prog E1 -> prog E2 -> prog (app E1 E2) -> type.
+
+- : lem-prog-app OF (prog/step S) D2 (prog/step (step/app/fn S)).
+- : lem-prog-app OF (prog/val V) (prog/step S) (prog/step (step/app/arg S V)).
+- : lem-prog-app OF (prog/val V1) (prog/val V2) (prog/step (step/app/beta V2)).
+
+%mode lem-prog-app +TP +P1 +P2 -P3.
+%worlds () (lem-prog-app _ _ _ _).
+%total {} (lem-prog-app _ _ _ _).
+
+prog_thm : {e: exp} of e T -> prog e -> type.
+
+
+prog_thm/z : prog_thm z D (prog/val val/z).
+
+prog_thm/fun : prog_thm (fun T E) D (prog/val val/fun).
+
+prog_thm/app : prog_thm (app E1 E2) (of/app D1 D2) D
+		<- prog_thm E1 D1 D1'
+		<- prog_thm E2 D2 D2'
+		<- lem-prog-app D1 D1' D2' D.
+
+%mode prog_thm +E +D -P.
+%worlds () (prog_thm _ _ _).
+%total D (prog_thm _ D _).
+
+%%-------------------------------------------------------------------
+
+%% Preservation theorem
+
+prev : of E T -> step E E' -> of E' T -> type.
+
+%mode prev +OF +STEP -OF'.
+
+prev/app/fn :
+	       prev (of/app D1 D2) (step/app/fn S1) (of/app D1' D2)
+	       <- prev D1 S1 D1'.
+
+prev/app/arg :
+		prev (of/app D1 D2) (step/app/arg S2 V1) (of/app D1 D2')
+		<- prev D2 S2 D2'.
+
+prev/app/beta :
+		 prev (of/app (of/fun D1) (D2: of E2 T1)) (step/app/beta V2)
+		 (D1 E2 D2).
+
+%worlds () (prev _ _ _).
+%total D (prev _ D _).
+
+%%---------------------------------------------------------------------------
+
+%% Termination
+
+terminates : exp -> type.
+%mode terminates +E.
+
+term/v : terminates V
+	  <- val V.
+
+term/step : terminates V
+	     <- step V V'
+	     <- terminates V'.
+
+%worlds (of_block) (terminates _).
+
+%%---------------------------------------------------------------------------
+
+%% Reducibility
+
+red : tp -> exp -> type.
+%mode red +TP +E.
+
+
+
+
+reducible : exp -> type.
+
+reducible : of E (arr T1 T2) -> of A T1 -> red T1 A -> red T2 (app E A) -> type.
+
+red/num : red num E <-
+		       terminates E.
+
+red/arr : red (arr T1 T2) E <-
+			       reducible E.
+%			 ({a : exp} of a T1 -> red T1 a -> red T2 (app E a)).
+
+%block red_block : some {T:tp} block {x:exp} {_: of x T}{_: red T x}.
+%worlds (red_block) (red _ _).
+
+
+
+%%--------------------------------------------------------------------------
+
+redu_red : {T : tp} ({E:exp}{E':exp} of E T -> step E E' -> red T E' -> red T E) -> type.
+
+%mode redu_red +T -F.
+
+
+% - : redu_red num OF STEP (red/num TERM) (red/num (term/step TERM STEP)).
+
+% - : redu_red (arr T1 T2) (OF: of E (arr T1 T2)) STEP (red/arr F)
+%      (red/arr [a:exp][D:of a T1][R:red T1 a] _).
+
+%% E -> E'
+%% E' red
+%%
+%% a red  -> E' a red
+%% E a -> E' a ==> E a red
+%%
+
+
+
+
+% %%--------------------------------------------------------------------------
+
+% %% All types are inhabited
+
+% inhabited : {t : tp} of E t -> type.
+% %mode inhabited +T -OF.
+
+% inh/num : inhabited num of/z.
+
+% inh/arr : inhabited (arr T1 T2) (of/fun ([x:exp][_:of x T1] RES))
+% 	   <- inhabited T2 RES.
+
+% %worlds () (inhabited _ _).
+% %total T (inhabited T _).
+
+% %% Output of inhabited is reducible
+
+% inh_red : inhabited T (D : of E T) -> red T E -> type.
+% %mode inh_red +INH -RED.
+
+% ind_red/num : inh_red (inh/num) (red/num (term/v val/z)).
+
+% ind_red/arr : inh_red (inh/arr InhT2) (red/arr
+% 					 ([a:exp][_:of a T1][_:red E a] _))
+% 	       <- inh_red InhT2 ResRed.
+
+% %%---------------------------------------------------------------------------
+
+% %% Neutral terms
+
+% neutral : exp -> type.
+
+% neutral/app : neutral (app E1 E2).
+
+% %% Crucial lemma
+
+% %% To check that a function terminates, apply some argument to it.
+% %% WHNF vs NORMALIZATION - here the proof is pretty simple, because
+% %% we need to evaluate the function first in out CBV strategy.
+
+% app_term_fun_term : terminates (app F A) -> terminates F -> type.
+
+% %mode (app_term_fun_term +TERM1 -TERM2).
+
+% - : app_term_fun_term
+%      (term/step
+% 	(T : terminates (app F' A))
+% 	(step/app/fn (STEP_F : step F F')))
+%      (term/step T' STEP_F)
+%      <- app_term_fun_term T (T' : terminates F').
+
+% - : app_term_fun_term (term/step _ (step/app/arg STEP_A VAL_F))
+%      (term/v VAL_F).
+
+% - : app_term_fun_term (term/step _ (step/app/beta VAL_A))
+%      (term/v val/fun).
+
+% %worlds () (app_term_fun_term _ _).
+% %total T (app_term_fun_term T _).
+
+% neutral_red_term : {T : tp} neutral E
+% 		    -> of E T
+% 		    -> red T E
+% 		    -> terminates E
+% 		    -> type.
+% %mode neutral_red_term +T +NEUTR +OF +RED -TERM.
+
+% - : neutral_red_term num _ _ (red/num TERM) TERM.
+
+%  % - : neutral_red_term
+%   %    (arr T1 T2)
+%   %    (NEUTRAL : neutral (app E1 E2))
+%   %    OF
+%   %    (red/arr F) _
+%   %    <- neutral_red_term
+%   % 	T2
+%   % 	(neutral/app : neutral (app (app E1 E2) X))
+%   % 	(F X _
+
+% 	   %% how to introduce an auxiliary variable?
+
+
+% % E = E1 @ E2          E : T1 -> T2
+% % Let x : T1 and red T1 x. 
+% % Then E x is neutral at type T2, so E x in RED, so E x terminates.
+% % We then need a lemma that E x terminates => E terminates -> sounds pretty easy.
+
+% %% Reducibility implies termination
+
+% red_terminate : of E T -> red T E -> terminates E -> type.
+% %mode red_terminate +OF +RED -TERM.
+
+% - : red_terminate (of/fun F) _ (term/v val/fun).
+
+% % - : red_terminate (of/app
+% % 		     (D1 : of E1 (arr T1 T2))
+% % 		     (D2 : of E2 T1))
+% %      RedF
+% %      _.
+
+% %%-----------------------------------------------------------------
+
+% %% All typable terms are reducible
+
+% all_red : of E T -> red T E -> type.
+
+% %mode all_red +OF -RED.
+
+% - : all_red (of/app D1 D2) (F E2 D2 R2)
+%      <- all_red D1 ((red/arr F) : red (arr T1 T2) E1)
+%      <- all_red D2 (R2 : red T1 E2).
+
+% - : all_red (of/fun F)
+%      (red/arr ([a : exp][Da : of a T1][Ra: red T1 a] _)).
+% %     <- ({x : exp} {D: of x T} all_red (F x D) RedFX).
+
+% %%---------------------------------------------------------------------------
+
+% %% The final goal
+
+% all_terminate : of E T -> terminates E -> type.
+% %mode all_terminate +TP -TERM.
+
+% %worlds () (all_terminate _ _).
+% %% %total TP (all_terminate TP _).
