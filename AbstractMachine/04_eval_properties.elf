@@ -1,0 +1,103 @@
+%% Lemma: values evaluate to themselves
+
+eval/val : {V : value E} eval E V -> type.
+%mode eval/val +V -EV.
+
+- : eval/val val/z eval/z.
+
+- : eval/val (val/s V) (eval/s EV)
+     <- eval/val V EV.
+
+- : eval/val (val/pair V1 V2) (eval/pair E2 E1)
+     <- eval/val V1 E1
+     <- eval/val V2 E2.
+
+- : eval/val (val/lam F) eval/lam.
+
+%worlds () (eval/val _ _).
+%total V (eval/val V _).
+
+%% Lemma: equal expr's evaluate to equal values
+
+eval-eq : eval E1 V1 -> eval E2 V2 -> id-exp E1 E2 -> id-val V1 V2 -> type.
+
+%mode eval-eq +P1 +P2 +E -EQ.
+
+- : eval-eq eval/z eval/z id-exp/refl id-val/refl.
+
+- : eval-eq (eval/s P1) (eval/s P2) id-exp/refl EQS
+     <- eval-eq P1 P2 id-exp/refl EQ
+     <- id-val-cong-suc EQ EQS.
+
+- : eval-eq (eval/fst P1) (eval/fst P2) id-exp/refl EQ'
+     <- eval-eq P1 P2 id-exp/refl EQ
+     <- id-val-cong-pair-fst EQ EQ'.
+
+- : eval-eq (eval/snd P1) (eval/snd P2) id-exp/refl EQ'
+     <- eval-eq P1 P2 id-exp/refl EQ
+     <- id-val-cong-pair-snd EQ EQ'.
+
+- : eval-eq (eval/pair P1 P1') (eval/pair P2 P2') id-exp/refl EQ2
+     <- eval-eq P1' P2' id-exp/refl EQ'
+     <- eval-eq P1 P2 id-exp/refl EQ
+     <- id-val-cong-pair EQ' EQ EQ2.
+
+- : eval-eq eval/lam eval/lam id-exp/refl id-val/refl.
+
+- : eval-eq (eval/app P1 P2 P3) (eval/app R1 R2 R3) id-exp/refl EQ_R
+     <- eval-eq P3 R3 id-exp/refl (EQ_F : id-val (val/lam F1) (val/lam F2)) 
+     <- eval-eq P2 R2 id-exp/refl (EQ_A : id-val V1 V2)
+     <- val2exp _ _ EQ_A EQ_A'
+     <- id-fun-arg EQ_F EQ_A' LEMMA
+     <- eval-eq P1 R1 LEMMA EQ_R.
+
+%worlds() (eval-eq _ _ _ _).
+%total P1 (eval-eq P1 _ _ _).
+
+%%----------------------------------------------
+%% Evaluator-based equality
+%%----------------------------------------------
+
+eval-equiv : eval E V1
+	      -> id-val V1 V2
+	      -> eval E V2
+	      -> type.
+%mode eval-equiv +E +V -E2.
+
+- : eval-equiv E id-val/refl E.
+
+%worlds () (eval-equiv _ _ _).
+%total {} (eval-equiv _ _ _).
+
+%%-----------------------------------------------
+
+eval-equiv-arg : eval E1 V
+	      -> id-exp E1 E2
+	      -> eval E2 V
+	      -> type.
+%mode eval-equiv-arg +E +V -E2.
+
+- : eval-equiv-arg E id-exp/refl E.
+
+%worlds () (eval-equiv-arg _ _ _).
+%total {} (eval-equiv-arg _ _ _).
+
+%%-----------------------------------------------------------
+%% A little bit of equational theory
+%% TODO: it's only the beginning
+
+== : exp -> exp -> type.            %infix right 10 == .
+
+eq : E1 == E2            
+      <- eval E2 V
+      <- eval E1 V.
+
+eq-fst : E1 == E2 -> eval (fst E1) V -> eval (fst E2) V -> type.
+%mode eq-fst +D +F1 -F2.
+
+- : eq-fst (eq V1 V2) (eval/fst E) (eval/fst E')
+     <- eval-eq V1 E id-exp/refl VAL_EQ
+     <- eval-equiv V2 VAL_EQ E'.
+
+%worlds () (eq-fst _ _ _).
+%total D (eq-fst D _ _).

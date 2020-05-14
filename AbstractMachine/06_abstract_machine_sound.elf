@@ -1,0 +1,70 @@
+%%----------------------------------------------------------------------
+%% Reflexive Transitive closure of machine transitions
+%%----------------------------------------------------------------------
+
+===>+ : state -> state -> type.
+%infix right 10 ===>+ .
+%name ===>+ STEPS.
+%mode ===>+ +START -END.
+
+am-many/z :
+	     ST ===>+ ST.
+
+am-many/s :
+	     ST1 ===>+ ST3
+	     <- ST1 =AM=> ST2
+	     <- ST2 ===>+ ST3.
+
+%worlds () (===>+ _ _).
+
+%% Append lemma
+
+am-app: ST1 ===>+ ST2 -> ST2 ===>+ ST3 -> ST1 ===>+ ST3 -> type.
+%mode am-app +STM1 +STM2 -STM3.
+
+- : am-app am-many/z STEP2 STEP2.
+
+- : am-app (am-many/s STEP S1) STEP2 (am-many/s STEP3 S1)
+     <- am-app STEP STEP2 STEP3.
+
+%worlds () (am-app _ _ _).
+%total S (am-app S _ _).
+
+%%--------------------------------------------------------------
+%% Eval => AM, soundness of the machine wrt to the evaluator
+%%--------------------------------------------------------------
+
+eval2machine : {S : stack} eval E V -> ev E S ===>+ ap V S -> type.
+%mode eval2machine +S +EV -AM.
+
+- : eval2machine S eval/z (am-many/s am-many/z ev/z).
+
+- : eval2machine S (eval/s D) (am-many/s GOAL ev/s)
+     <- eval2machine (f-s , S) D LEMMA
+     <- am-app LEMMA (am-many/s am-many/z ap/s) GOAL.
+
+- : eval2machine S (eval/fst D) (am-many/s GOAL ev/fst)
+     <- eval2machine (f-fst , S) D LEMMA
+     <- am-app LEMMA (am-many/s am-many/z ap/fst) GOAL.
+
+- : eval2machine S (eval/snd D) (am-many/s GOAL ev/snd)
+     <- eval2machine (f-snd , S) D LEMMA
+     <- am-app LEMMA (am-many/s am-many/z ap/snd) GOAL.
+
+- : eval2machine S (eval/pair D1 D2) (am-many/s GOAL ev/pair1)
+     <- eval2machine (f-pair1 _ , S) D2 LEMMA1
+     <- eval2machine (f-pair2 _ , S) D1 LEMMA2
+     <- am-app LEMMA1 (am-many/s LEMMA2 ap/pair1) LEMMA3
+     <- am-app LEMMA3 (am-many/s am-many/z ap/pair2) GOAL.
+
+- : eval2machine S (eval/lam) (am-many/s am-many/z ev/lam).
+
+- : eval2machine S (eval/app D3 D2 D1) (am-many/s GOAL ev/app1)
+     <- eval2machine (f-app1 _ , S) D1 LEMMA1
+     <- eval2machine (f-app2 _ , S) D2 LEMMA2
+     <- eval2machine S D3 LEMMA4
+     <- am-app LEMMA1 (am-many/s LEMMA2 ap/app1) LEMMA3
+     <- am-app LEMMA3 (am-many/s LEMMA4 ap/app2) GOAL.
+
+%worlds () (eval2machine _ _ _).
+%total EV (eval2machine _ EV _).

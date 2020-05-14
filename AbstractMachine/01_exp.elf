@@ -1,0 +1,26 @@
+%%-----------------------------------------------------------
+%% Untyped lambda expressions
+%%-----------------------------------------------------------
+
+exp : type.
+%name exp E x.
+
+z : exp.
+s : exp -> exp.
+fst : exp -> exp.
+snd : exp -> exp.
+pair : exp -> exp -> exp.
+lam : (exp -> exp) -> exp.
+app : exp -> exp -> exp.
+
+%%-----------------------------------------------
+%% Values
+%%-----------------------------------------------
+
+value : exp -> type.
+%name value V v.
+
+val/z : value z.
+val/s : value V -> value (s V).
+val/pair : value V1 -> value V2 -> value (pair V1 V2).
+val/lam : {F: exp -> exp} value (lam F).

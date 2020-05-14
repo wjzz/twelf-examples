@@ -1,0 +1,103 @@
+%%-----------------------------------------------
+%% Abstract machine
+%%-----------------------------------------------
+
+frame : type.
+%name frame F f.
+
+f-s : frame.
+f-fst : frame.
+f-snd : frame.
+f-pair1 : exp -> frame.
+f-pair2 : value V -> frame.
+f-app1 : exp -> frame.
+f-app2 : value V -> frame.
+
+stack : type.
+%name stack S s.
+
+nil : stack.
+, : frame -> stack -> stack.        %infix right 10 , .
+
+state : type.
+%name state ST.
+
+ev : exp -> stack -> state.
+ap : value E -> stack -> state.
+
+=AM=> : state -> state -> type.
+%infix right 10 =AM=> .
+%name =AM=> D.
+%mode =AM=> +PREV -NEXT.
+
+ev/z :
+	ev z S
+	=AM=>
+	ap val/z S.
+
+ev/s : 
+	ev (s E) S
+	=AM=>
+	ev E (f-s , S).
+
+ap/s : 
+	ap V (f-s , S)
+	=AM=>
+	ap (val/s V) S.
+
+ev/fst : 
+	  ev (fst E) S
+	  =AM=>
+	  ev E (f-fst , S).
+
+ap/fst : 
+	  ap (val/pair V1 V2) (f-fst , S)
+	  =AM=>
+	  ap V1 S.
+
+ev/snd : 
+	  ev (snd E) S
+	  =AM=>
+	  ev E (f-snd , S).
+
+ap/snd :
+	  ap (val/pair V1 V2) (f-snd , S)
+	  =AM=>
+	  ap V2 S.
+
+ev/pair1 : 
+	    ev (pair E1 E2) S
+	    =AM=>
+	    ev E1 (f-pair1 E2 , S).
+
+ap/pair1 :
+	    ap V1 (f-pair1 E2 , S)
+	    =AM=>
+	    ev E2 (f-pair2 V1 , S).
+
+ap/pair2 : 
+	    ap V2 (f-pair2 V1 , S)
+	    =AM=>
+	    ap (val/pair V1 V2) S.
+
+ev/lam : 
+	  ev (lam F) S
+	  =AM=>
+	  ap (val/lam F) S.
+
+ev/app1 : 
+	   ev (app E1 E2) S
+	   =AM=>
+	   ev E1 (f-app1 E2 , S).
+
+ap/app1 : 
+	   ap V (f-app1 E2 , S)
+	   =AM=>
+	   ev E2 (f-app2 V , S).
+
+ap/app2 : 
+	   ap (V2 : value E) (f-app2 (val/lam F) , S)
+	   =AM=>
+	   ev (F E) S.
+
+%worlds () (=AM=> _ _).

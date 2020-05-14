@@ -1,0 +1,90 @@
+%%--------------------------------------------------
+%% Identity of expresions
+
+id-exp : exp -> exp -> type.
+id-exp/refl : id-exp T T.
+
+%%----------------------------------------------------------------
+%% Identity of values
+
+id-val : value E1 -> value E2 -> type.
+id-val/refl : id-val V V.
+
+%%----------------------------------------------------------------
+%% Congruence lemmas
+%%----------------------------------------------------------------
+
+id-val-cong-suc : id-val V1 V2 -> id-val (val/s V1) (val/s V2) -> type.
+%mode id-val-cong-suc +EQ -EQS.
+
+- : id-val-cong-suc id-val/refl id-val/refl.
+
+%worlds () (id-val-cong-suc _ _).
+%total {} (id-val-cong-suc _ _).
+
+%%---------------------------------------------------------
+
+id-val-cong-pair-fst :
+			id-val (val/pair V1 V3) (val/pair V2 V4)
+			-> id-val V1 V2
+			-> type.
+%mode id-val-cong-pair-fst +EQ -EQPAIR.
+
+- : id-val-cong-pair-fst id-val/refl id-val/refl.
+
+%worlds () (id-val-cong-pair-fst _ _).
+%total {} (id-val-cong-pair-fst _ _).
+
+%%---------------------------------------------------------
+
+id-val-cong-pair-snd :
+			id-val (val/pair V1 V3) (val/pair V2 V4)
+			-> id-val V3 V4
+			-> type.
+%mode id-val-cong-pair-snd +EQ -EQPAIR.
+
+- : id-val-cong-pair-snd id-val/refl id-val/refl.
+
+%worlds () (id-val-cong-pair-snd _ _).
+%total {} (id-val-cong-pair-snd _ _).
+
+%%---------------------------------------------------------
+
+id-val-cong-pair : id-val V1 V2
+		    -> id-val V3 V4
+		    -> id-val (val/pair V1 V3) (val/pair V2 V4)
+		    -> type.
+%mode id-val-cong-pair +EQ1 +EQ2 -EQP.
+
+- : id-val-cong-pair id-val/refl id-val/refl id-val/refl.
+
+%worlds () (id-val-cong-pair _ _ _).
+%total {} (id-val-cong-pair _ _ _).
+
+%%---------------------------------------------------------
+
+id-fun-arg :  id-val (val/lam F1) (val/lam F2)
+	      -> id-exp E1 E2
+	      -> id-exp (F1 E1) (F2 E2)
+	      -> type.
+%mode id-fun-arg +F +A -R.
+
+- : id-fun-arg id-val/refl id-exp/refl id-exp/refl.
+
+%worlds () (id-fun-arg _ _ _).
+%total {} (id-fun-arg _ _ _).
+
+%%---------------------------------------------------------
+%% Equal values become equal expressions
+
+val2exp : {V1 : value E1}
+	   {V2 : value E2}
+	   id-val V1 V2
+	   -> id-exp E1 E2
+	   -> type.
+%mode val2exp +V1 +V2 +P -R.
+
+- : val2exp V1 V1 id-val/refl id-exp/refl.
+
+%worlds () (val2exp _ _ _ _).
+%total {} (val2exp _ _ _ _).

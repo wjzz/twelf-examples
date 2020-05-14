@@ -1,0 +1,26 @@
+%%-----------------------------------------------
+%% Natural semantics/direct style evaluator
+%%-----------------------------------------------
+
+%% Evaluator
+
+eval : exp -> value V -> type.
+%mode eval +E -V.
+
+eval/z : eval z val/z.
+eval/s : eval (s E) (val/s V)
+	  <- eval E V.
+eval/fst : eval (fst E) V1
+	    <- eval E (val/pair V1 V2).
+eval/snd : eval (snd E) V2
+	    <- eval E (val/pair V1 V2).
+eval/pair : eval (pair E1 E2) (val/pair V1 V2)
+	     <- eval E1 V1
+	     <- eval E2 V2.
+eval/lam : eval (lam F) (val/lam F).
+eval/app : eval (app E1 E2) V2
+	    <- eval E1 (val/lam F)
+	    <- eval E2 (V1 : value E3)
+	    <- eval (F E3) V2.
+
+%worlds () (eval _ _).
