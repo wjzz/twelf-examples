@@ -71,105 +71,84 @@ plug-eq : plug E S X1 -> plug E S X2 -> id-exp X1 X2 -> type.
 %worlds () (plug-eq _ _ _).
 %total P1 (plug-eq P1 _ _).
 
-%%-----------------------------------------
-%% Eval-equivalent pairs
-%%----------------------------------------
+%%-------------------------------------------------------
+%% E1 <= E2       implies     eval E1 V  implies eval E2 V
+%%-------------------------------------------------------
 
-equal-fst-pair :
-		  value E1
-		  -> value E2
-		  -> E1 == fst (pair E1 E2)
-		  -> type.
-%mode equal-fst-pair +V1 +V2 -EQ.
+implies : exp -> exp -> type.
+%%mode implies +E1 -E2.
 
-- : equal-fst-pair V1 V2 (eq EQ1 (eval/fst (eval/pair EQ2 EQ1)))
-     <- eval/val V1 EQ1
-     <- eval/val V2 EQ2.
+% reduction rules
+imp/fst-pair : implies (fst (pair E1 E2)) E1
+		<- value E2
+		<- value E1.
+imp/snd-pair : implies (snd (pair E1 E2)) E2
+		<- value E2
+		<- value E1.
+imp/beta : implies (app (lam F) E) (F E)
+	    <- value E.
 
-%worlds () (equal-fst-pair _ _ _).
-%total {} (equal-fst-pair _ _ _).
+% congruence rules
+imp/z : implies z z.
+imp/s : implies (s E1) (s E2) <- implies E1 E2.
+imp/fst : implies (fst E1) (fst E2) <- implies E1 E2.
+imp/snd : implies (snd E1) (snd E2) <- implies E1 E2.
+imp/pair : implies (pair E1 E2) (pair E1' E2')
+	    <- implies E2 E2'
+	    <- implies E1 E1'.
+imp/lam : implies (lam F) (lam F).
+imp/app : implies (app E1 E2) (app E1' E2')
+	    <- implies E2 E2'
+	    <- implies E1 E1'.
+
+imp/trans : implies E1 E3
+	     <- implies E2 E3
+	     <- implies E1 E2.
+	       
+% worlds () (implies _ _).
+% total E (implies E _).
+
+%%-------------------------------------------------
+
+imp-refl : {E : exp} implies E E -> type.
+%mode imp-refl +E -IMPLIES.
+
+- : imp-refl z imp/z.
+- : imp-refl (s E) (imp/s D) <- imp-refl E D.
+- : imp-refl (fst E) (imp/fst D) <- imp-refl E D.
+- : imp-refl (snd E) (imp/snd D) <- imp-refl E D.
+- : imp-refl (lam F) imp/lam.
+- : imp-refl (pair E1 E2) (imp/pair D1 D2)
+     <- imp-refl E1 D1
+     <- imp-refl E2 D2.
+- : imp-refl (app E1 E2) (imp/app D1 D2)
+     <- imp-refl E1 D1
+     <- imp-refl E2 D2.
+
+%worlds () (imp-refl _ _).
+%total E (imp-refl E _).
+
+%%-------------------------------------------------
+
+imp-eval : implies E1 E2 -> eval E2 V -> eval E1 V -> type.
+%mode imp-eval +IMP +EV2 -EV1.
+
+%worlds () (imp-eval _ _ _).
+%total {} (imp-eval _ _ _).
 
 %%-----------------------------------------------
 
-equal-snd-pair :
-		  value E1
-		  -> value E2
-		  -> E2 == snd (pair E1 E2)
-		  -> type.
-%mode equal-snd-pair +V1 +V2 -EQ.
+imp-ctx : implies E1 E2
+	   -> plug E1 S E1'
+	   -> plug E2 S E2'
+	   -> implies E1' E2'
+	   -> type.
+%mode imp-ctx +IMP +P1 +P2 -IMP2.
 
-- : equal-snd-pair V1 V2 (eq EQ2 (eval/snd (eval/pair EQ2 EQ1)))
-     <- eval/val V1 EQ1
-     <- eval/val V2 EQ2.
+%worlds () (imp-ctx _ _ _ _).
+%total I (imp-ctx I _ _ _).
 
-%worlds () (equal-snd-pair _ _ _).
-%total {} (equal-snd-pair _ _ _).
-
-%%-----------------------------------------------
-
-eval-plug-beta :
-		  value E
-		  -> plug (F E) S E1
-		  -> eval E1 V
-		  -> plug (app (lam F) E) S E2
-		  -> eval E2 V
-		  -> type.
-
-% plug (F E) S E1
-% eval E1 V
-% eval (F E) V'
-
-% plug (F E) (fst , S) = plug (fst (F E)) S E1
-% 			eval (plug (fst (F E) S)) V
-
-% E1 == E2 -> eval E1 === eval E2
-		     
-
-% %%-----------------------------------------------
-
-% plug E S E'
-
-% eval E V
-
-% eval E' V'
-
-% ev E S ===> ev V S                  ---> E ==> V
-
-% ev E (fst :: S) ===> ev V S         ---> fst E ==> V
-
-% ev E (snd :: S) ===> ev V S         ---> snd E ==> V
-
-% ev E (pair1 E2 :: S) ==> ev V S      ---> pair E E2 ==> V
-
-% ev E (pair2 V1 :: S) ==> ev V S      ---> pair V1 E ===> V
-
-% ev E (app1 A :: S) ==> ev V S     ---> pair (E A) ===> V
-
-% ev E (app2 F :: S) ==> ev V S     ---> pair (F E) ===> V
-
-% ===============================
-
-% ev (fst E) S -> ev E (fst :: S)
-
-% ev V (fst :: S) -> ap V 
-
-% equal-beta :
-% 	      value E
-% 	      -> eval (F E) V
-% 	      -> F E == app (lam F) E
-
-% %%-----------------------------------------------
-
-% eval-plug-eq : eval E1 V2
-% 		-> eval E2 V2
-% 		-> plug E1 S ES1
-% 		-> plug E2 S ES2
-% 		-> eval ES1 V
-% 		-> eval ES2 V.
-
-%%-------------------------------------------
-%
-%
+%%--------------------------------------------------------
 
 inv : ST1 =AM=> ST2
        -> flat ST1 E1
@@ -195,16 +174,10 @@ inv : ST1 =AM=> ST2
 % %% Non-trivial case, because we contract a redex here
 % %% fst (V1 V2) ---> V1
 
-% {V1:value E1}
-% {V2:value E2}
-% {V3:value E5}
-% {P1:plug (fst (pair E1 E2)) S1 E3}
-% {P2:plug E1 S1 E4}
-% {EV2:eval E4 V3}
-% ====================
-% {EV23:eval E3 V3}
-
-- : inv ap/fst (flat/ap (plug/fst P1)) (flat/ap P2) EV2 EV2.
+-  : inv (ap/fst : ap (val/pair V1 V2) _ =AM=> _)
+      (flat/ap (plug/fst P1)) (flat/ap P2) EV EV3
+      <- imp-ctx (imp/fst-pair V1 V2) P1 P2 GOAL
+      <- imp-eval GOAL EV EV3.
 
 - : inv ev/snd (flat/ev P1) (flat/ev (plug/snd P2)) EV EV2
      <- plug-eq P2 P1 EQ
@@ -213,6 +186,11 @@ inv : ST1 =AM=> ST2
 % %% Here also a redex is contracted
 % %% fst (V1 V2) ---> V2
 % %% - : inv (ap/snd) F1 F2 EV2 EV23.
+
+-  : inv (ap/snd : ap (val/pair V1 V2) _ =AM=> _)
+      (flat/ap (plug/snd P1)) (flat/ap P2) EV EV3
+      <- imp-ctx (imp/snd-pair V1 V2) P1 P2 GOAL
+      <- imp-eval GOAL EV EV3.
 
 - : inv ev/pair1 (flat/ev P1) (flat/ev (plug/pair1 P2)) EV EV2
      <- plug-eq P2 P1 EQ
@@ -238,30 +216,29 @@ inv : ST1 =AM=> ST2
      <- plug-eq P2 P1 EQ
      <- eval-equiv-arg EV EQ EV2.
 
-%% {P1:plug (app (lam ([x:exp] X3 x)) X1) X4 X5}
-%% {P2:plug (X3 X1) X4 X6}
-%% {EV:eval X6 X8} {EV2:eval X5 X8}
-% - : inv ap/app2 (flat/ap (plug/app2 P1)) (flat/ev P2) EV EV2.
-
+- : inv (ap/app2 : ap (V : value E) _ =AM=> _)
+     (flat/ap (plug/app2 P1)) (flat/ev P2) EV EV2
+     <- imp-ctx (imp/beta V) P1 P2 GOAL
+     <- imp-eval GOAL EV EV2.
 
 %worlds () (inv _ _ _  _ _).
 %total STEP (inv STEP _ _ _ _).
 
-thm : {e : exp} {v : value E'}
-       ev E nil =AM=> ap V nil
-       -> eval E V
-       -> type.
+% thm : {e : exp} {v : value E'}
+%        ev E nil =AM=> ap V nil
+%        -> eval E V
+%        -> type.
 
-%mode thm +E +V +STEP -EV.
+% %mode thm +E +V +STEP -EV.
 
-- : thm E (V : value E') STEP EVV
-     <- eval/val V EV_V
-     <- inv STEP
-	(flat/ev plug/nil : flat _ E)
-	(flat/ap plug/nil : flat _ E')
-	EV_V
-	EVV.
+% - : thm E (V : value E') STEP EVV
+%      <- eval/val V EV_V
+%      <- inv STEP
+% 	(flat/ev plug/nil : flat _ E)
+% 	(flat/ap plug/nil : flat _ E')
+% 	EV_V
+% 	EVV.
 
 
-%worlds () (thm _ _ _ _).
-%total STEP (thm _ _ STEP _).
+% %worlds () (thm _ _ _ _).
+% %total STEP (thm _ _ STEP _).
