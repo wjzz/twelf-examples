@@ -73,10 +73,12 @@ plug-eq : plug E S X1 -> plug E S X2 -> id-exp X1 X2 -> type.
 
 %%-------------------------------------------------------
 %% E1 <= E2       implies     eval E1 V  implies eval E2 V
-%%-------------------------------------------------------
+%
+%% Reflexive and transitive closure of the reduction relation
+%%-----------------------------------------------------------
 
 implies : exp -> exp -> type.
-%%mode implies +E1 -E2.
+%mode implies +E1 -E2.
 
 % reduction rules
 imp/fst-pair : implies (fst (pair E1 E2)) E1
@@ -85,7 +87,8 @@ imp/fst-pair : implies (fst (pair E1 E2)) E1
 imp/snd-pair : implies (snd (pair E1 E2)) E2
 		<- value E2
 		<- value E1.
-imp/beta : implies (app (lam F) E) (F E)
+imp/beta : implies (app (lam F) E) E'
+	    <- id-exp (F E) E'
 	    <- value E.
 
 % congruence rules
@@ -101,14 +104,14 @@ imp/app : implies (app E1 E2) (app E1' E2')
 	    <- implies E2 E2'
 	    <- implies E1 E1'.
 
-imp/trans : implies E1 E3
-	     <- implies E2 E3
-	     <- implies E1 E2.
-	       
-% worlds () (implies _ _).
-% total E (implies E _).
+% imp/trans : implies E1 E3
+% 	     <- implies E1 E2
+% 	     <- implies E2 E3.
 
-%%-------------------------------------------------
+%worlds () (implies _ _).
+%terminates E (implies E _).
+
+%%---------------------------------------------
 
 imp-refl : {E : exp} implies E E -> type.
 %mode imp-refl +E -IMPLIES.
@@ -128,15 +131,61 @@ imp-refl : {E : exp} implies E E -> type.
 %worlds () (imp-refl _ _).
 %total E (imp-refl E _).
 
+%%-----------------------------------------------------
+
+imp-eval-lemma:
+		 value E
+		 -> id-exp (F E) E'
+		 -> eval E' V
+		 -> eval (app (lam F) E) V
+		 -> type.
+%mode imp-eval-lemma +V +EQ +EV2 -EV.
+
+- : imp-eval-lemma V id-exp/refl EV (eval/app EV ARG eval/lam)
+     <- eval/val V ARG.
+
+%worlds () (imp-eval-lemma _ _ _ _).
+%total {} (imp-eval-lemma _ _ _ _).
+
 %%-------------------------------------------------
 
 imp-eval : implies E1 E2 -> eval E2 V -> eval E1 V -> type.
 %mode imp-eval +IMP +EV2 -EV1.
 
-%worlds () (imp-eval _ _ _).
-%total {} (imp-eval _ _ _).
+- : imp-eval (imp/beta V EQ) EV2 GOAL
+     <- imp-eval-lemma V EQ EV2 GOAL.
 
-%%-----------------------------------------------
+- : imp-eval (imp/fst-pair V1 V2) EV2 (eval/fst (eval/pair OUT EV2))
+     <- eval/val V2 OUT.
+
+- : imp-eval (imp/snd-pair V1 V2) EV2 (eval/snd (eval/pair EV2 P2))
+     <- eval/val V1 P2.
+
+- : imp-eval imp/z E E.
+
+- : imp-eval (imp/s IMP) (eval/s D) (eval/s D2)
+     <- imp-eval IMP D D2.
+
+- : imp-eval (imp/fst IMP) (eval/fst D) (eval/fst D2)
+     <- imp-eval IMP D D2.
+
+- : imp-eval (imp/snd IMP) (eval/snd D) (eval/snd D2)
+     <- imp-eval IMP D D2.
+
+- : imp-eval (imp/pair B A) (eval/pair D1 D2) (eval/pair D1' D2')
+     <- imp-eval A D1 D1'
+     <- imp-eval B D2 D2'.
+
+- : imp-eval imp/lam E E.
+
+- : imp-eval (imp/app B A) (eval/app RES2 ARG FUN) (eval/app RES2 ARG2 FUN2)
+     <- imp-eval B FUN FUN2
+     <- imp-eval A ARG ARG2.
+
+%worlds () (imp-eval _ _ _).
+%total I (imp-eval I _ _).
+
+%%--------------------------------------------------------
 
 imp-ctx : implies E1 E2
 	   -> plug E1 S E1'

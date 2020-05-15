@@ -2,7 +2,12 @@
 %% Identity of expresions
 
 id-exp : exp -> exp -> type.
+%mode id-exp +E1 -E2.
+
 id-exp/refl : id-exp T T.
+
+%worlds () (id-exp _ _).
+%total {} (id-exp _ _).
 
 %%----------------------------------------------------------------
 %% Identity of values
