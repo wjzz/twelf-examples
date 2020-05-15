@@ -24,6 +24,32 @@ plug/app2 : plug E (f-app2 (V : value F) , S) E'
 %worlds () (plug _ _ _).
 %total S (plug _ S _).
 
+%%----------------------------------------
+
+get-plug : {E : exp}{S : stack} {E' : exp} plug E S E' -> type.
+%mode get-plug +E +S -E' -PLUG.
+
+- : get-plug E nil E plug/nil.
+- : get-plug E (f-s , S) E' (plug/s D)
+     <- get-plug (s E) S E' D.
+- : get-plug E (f-fst , S) E' (plug/fst D)
+     <- get-plug (fst E) S E' D.
+- : get-plug E (f-snd , S) E' (plug/snd D)
+     <- get-plug (snd E) S E' D.
+- : get-plug E (f-pair1 E2 , S) E' (plug/pair1 D)
+     <- get-plug (pair E E2) S E' D.
+- : get-plug E (f-pair2 (V : value E1) , S) E' (plug/pair2 D)
+     <- get-plug (pair E1 E) S E' D.
+- : get-plug E (f-app1 E2 , S) E' (plug/app1 D)
+     <- get-plug (app E E2) S E' D.
+- : get-plug E (f-app2 (V : value F) , S) E' (plug/app2 D)
+     <- get-plug (app F E) S E' D.
+
+%worlds () (get-plug _ _ _ _).
+%total S (get-plug _ S _ _).
+
+
+
 %% Flattenning the states into expressions
 
 flat : state -> exp -> type.
@@ -37,6 +63,20 @@ flat/ap : flat (ap (V : value E) S) E'
 
 %worlds () (flat _ _).
 %total S (flat S _).
+
+%%------------------------------------
+
+get-flat : {ST : state} {E : exp} flat ST E -> type.
+%mode get-flat +S -E -FLAT.
+
+- : get-flat (ev E1 S) E (flat/ev LEMMA)
+     <- get-plug E1 S E LEMMA.
+
+- : get-flat (ap (V : value E1) S) E (flat/ap LEMMA)
+     <- get-plug E1 S E LEMMA.
+
+%worlds () (get-flat _ _ _).
+%total S (get-flat S _ _).
 
 %%------------------------------------------
 %% Lemma: result of plug is unique
@@ -70,6 +110,21 @@ plug-eq : plug E S X1 -> plug E S X2 -> id-exp X1 X2 -> type.
 
 %worlds () (plug-eq _ _ _).
 %total P1 (plug-eq P1 _ _).
+
+%% Result of flat is unique : 
+
+flat-eq : flat S E1 -> flat S E2 -> id-exp E1 E2 -> type.
+
+%mode flat-eq +P1 +P2 -EQ.
+
+- : flat-eq (flat/ev S1) (flat/ev S2) GOAL
+     <- plug-eq S1 S2 GOAL.
+
+- : flat-eq (flat/ap S1) (flat/ap S2) GOAL
+     <- plug-eq S1 S2 GOAL.
+
+%worlds () (flat-eq _ _ _).
+%total P1 (flat-eq P1 _ _).
 
 %%-------------------------------------------------------
 %% E1 <= E2       implies     eval E1 V  implies eval E2 V
@@ -187,15 +242,44 @@ imp-eval : implies E1 E2 -> eval E2 V -> eval E1 V -> type.
 
 %%--------------------------------------------------------
 
-imp-ctx : implies E1 E2
+imp-ctx : {S : stack}
+	   implies E1 E2
 	   -> plug E1 S E1'
 	   -> plug E2 S E2'
 	   -> implies E1' E2'
 	   -> type.
-%mode imp-ctx +IMP +P1 +P2 -IMP2.
+%mode imp-ctx +S +IMP +P1 +P2 -IMP2.
 
-%worlds () (imp-ctx _ _ _ _).
-%total I (imp-ctx I _ _ _).
+- : imp-ctx nil IMP plug/nil plug/nil IMP.
+
+- : imp-ctx (f-s , S) IMP (plug/s P1) (plug/s P2) LEMMA
+     <- imp-ctx S (imp/s IMP) P1 P2 LEMMA.
+
+- : imp-ctx (f-fst , S) IMP (plug/fst P1) (plug/fst P2) LEMMA
+     <- imp-ctx S (imp/fst IMP) P1 P2 LEMMA.
+
+- : imp-ctx (f-snd , S) IMP (plug/snd P1) (plug/snd P2) LEMMA
+     <- imp-ctx S (imp/snd IMP) P1 P2 LEMMA.
+
+- : imp-ctx (f-pair1 E , S) IMP (plug/pair1 P1) (plug/pair1 P2) LEMMA
+     <- imp-refl E IMP2
+     <- imp-ctx S (imp/pair IMP IMP2) P1 P2 LEMMA.
+
+- : imp-ctx (f-pair2 (V : value E) , S) IMP (plug/pair2 P1) (plug/pair2 P2)
+     LEMMA
+     <- imp-refl E IMP2
+     <- imp-ctx S (imp/pair IMP2 IMP) P1 P2 LEMMA.
+
+- : imp-ctx (f-app1 E , S) IMP (plug/app1 P1) (plug/app1 P2) LEMMA
+     <- imp-refl E IMP2
+     <- imp-ctx S (imp/app IMP IMP2) P1 P2 LEMMA.
+
+- : imp-ctx (f-app2 (V : value E) , S) IMP (plug/app2 P1) (plug/app2 P2) LEMMA
+     <- imp-refl E IMP2
+     <- imp-ctx S (imp/app IMP2 IMP) P1 P2 LEMMA.
+
+%worlds () (imp-ctx _ _ _ _ _).
+%total S (imp-ctx S _ _ _ _).
 
 %%--------------------------------------------------------
 
@@ -207,6 +291,10 @@ inv : ST1 =AM=> ST2
        -> type.
 
 %mode inv +STEP +FLAT1 +FLAT2 +EVAL2 -EVAL1.
+
+- : inv ev/z (flat/ev P1) (flat/ap P2) EV GOAL
+     <- plug-eq P2 P1 EQ
+     <- eval-equiv-arg EV EQ GOAL.
 
 - : inv ev/s (flat/ev P1) (flat/ev (plug/s P2)) EV EV2
      <- plug-eq P2 P1 EQ
@@ -225,7 +313,7 @@ inv : ST1 =AM=> ST2
 
 -  : inv (ap/fst : ap (val/pair V1 V2) _ =AM=> _)
       (flat/ap (plug/fst P1)) (flat/ap P2) EV EV3
-      <- imp-ctx (imp/fst-pair V1 V2) P1 P2 GOAL
+      <- imp-ctx _ (imp/fst-pair V1 V2) P1 P2 GOAL
       <- imp-eval GOAL EV EV3.
 
 - : inv ev/snd (flat/ev P1) (flat/ev (plug/snd P2)) EV EV2
@@ -238,7 +326,7 @@ inv : ST1 =AM=> ST2
 
 -  : inv (ap/snd : ap (val/pair V1 V2) _ =AM=> _)
       (flat/ap (plug/snd P1)) (flat/ap P2) EV EV3
-      <- imp-ctx (imp/snd-pair V1 V2) P1 P2 GOAL
+      <- imp-ctx _ (imp/snd-pair V1 V2) P1 P2 GOAL
       <- imp-eval GOAL EV EV3.
 
 - : inv ev/pair1 (flat/ev P1) (flat/ev (plug/pair1 P2)) EV EV2
@@ -265,29 +353,59 @@ inv : ST1 =AM=> ST2
      <- plug-eq P2 P1 EQ
      <- eval-equiv-arg EV EQ EV2.
 
+%% The third and final non-trivial case,
+%% A beta reduction is performed here.
+
 - : inv (ap/app2 : ap (V : value E) _ =AM=> _)
      (flat/ap (plug/app2 P1)) (flat/ev P2) EV EV2
-     <- imp-ctx (imp/beta V) P1 P2 GOAL
+     <- imp-ctx _ (imp/beta V id-exp/refl) P1 P2 GOAL
      <- imp-eval GOAL EV EV2.
 
 %worlds () (inv _ _ _  _ _).
 %total STEP (inv STEP _ _ _ _).
 
-% thm : {e : exp} {v : value E'}
-%        ev E nil =AM=> ap V nil
-%        -> eval E V
-%        -> type.
+%%--------------------------------------------------
 
-% %mode thm +E +V +STEP -EV.
+inv-many : ST1 ===>+ ST2
+	    -> flat ST1 E1
+	    -> flat ST2 E2
+	    -> eval E2 V
+	    -> eval E1 V
+	    -> type.
 
-% - : thm E (V : value E') STEP EVV
-%      <- eval/val V EV_V
-%      <- inv STEP
-% 	(flat/ev plug/nil : flat _ E)
-% 	(flat/ap plug/nil : flat _ E')
-% 	EV_V
-% 	EVV.
+%mode inv-many +STEP +FLAT1 +FLAT2 +EVAL2 -EVAL1.
+
+- : inv-many am-many/z F1 F2 EV GOAL
+     <- flat-eq F2 F1 EQ
+     <- eval-equiv-arg EV EQ GOAL.
+
+- : inv-many (am-many/s STEPS (STEP : _ =AM=> ST3)) F1 F2 EV GOAL
+     <- get-flat ST3 E3 F3
+     <- inv-many STEPS F3 F2 EV LEMMA
+     <- inv STEP F1 F3 LEMMA GOAL.
+
+%worlds () (inv-many _ _ _  _ _).
+%total STEP (inv-many STEP _ _ _ _).
 
 
-% %worlds () (thm _ _ _ _).
-% %total STEP (thm _ _ STEP _).
+%%----------------------------------------------------
+%% COMPLETENESS OF THE ABSTRACT MACHINE
+%%----------------------------------------------------
+
+complete:
+	    ev E nil ===>+ ap V nil
+	    -> eval E V
+	    -> type.
+
+%mode complete +STEPS -EVAL.
+
+- : complete STEPS (GOAL : eval E V)
+     <- eval/val V EV
+     <- inv-many STEPS
+	(flat/ev plug/nil)
+	(flat/ap plug/nil)
+	EV
+	GOAL.
+
+%worlds () (complete _ _).
+%total STEPS (complete STEPS _ ).
