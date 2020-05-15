@@ -1,6 +1,6 @@
-%%-------------------------------------------
-%% Plugging the expressions in the stacks
-%%-------------------------------------------
+%%--------------------------------------------------------------
+%% Plugging the expressions in the stacks/evaluation contexts
+%%--------------------------------------------------------------
 
 plug : exp -> stack -> exp -> type.
 %mode plug +E +S -E2.
@@ -24,7 +24,10 @@ plug/app2 : plug E (f-app2 (V : value F) , S) E'
 %worlds () (plug _ _ _).
 %total S (plug _ S _).
 
-%%----------------------------------------
+%%-------------------------------------------------------------
+%% The same as above, but this this we output both the term and
+%% a proof that relates the output to the inputs (AKA strong specification.
+%%--------------------------------------------------------------
 
 get-plug : {E : exp}{S : stack} {E' : exp} plug E S E' -> type.
 %mode get-plug +E +S -E' -PLUG.
@@ -48,8 +51,7 @@ get-plug : {E : exp}{S : stack} {E' : exp} plug E S E' -> type.
 %worlds () (get-plug _ _ _ _).
 %total S (get-plug _ S _ _).
 
-
-
+%%---------------------------------------------------------
 %% Flattenning the states into expressions
 
 flat : state -> exp -> type.
@@ -64,7 +66,7 @@ flat/ap : flat (ap (V : value E) S) E'
 %worlds () (flat _ _).
 %total S (flat S _).
 
-%%------------------------------------
+%%-------------------------------------------------------
 
 get-flat : {ST : state} {E : exp} flat ST E -> type.
 %mode get-flat +S -E -FLAT.
@@ -78,7 +80,7 @@ get-flat : {ST : state} {E : exp} flat ST E -> type.
 %worlds () (get-flat _ _ _).
 %total S (get-flat S _ _).
 
-%%------------------------------------------
+%%--------------------------------------------------------
 %% Lemma: result of plug is unique
 
 plug-eq : plug E S X1 -> plug E S X2 -> id-exp X1 X2 -> type.
@@ -126,162 +128,182 @@ flat-eq : flat S E1 -> flat S E2 -> id-exp E1 E2 -> type.
 %worlds () (flat-eq _ _ _).
 %total P1 (flat-eq P1 _ _).
 
-%%-------------------------------------------------------
-%% E1 <= E2       implies     eval E1 V  implies eval E2 V
-%
-%% Reflexive and transitive closure of the reduction relation
+%%-----------------------------------------------------------
+%% Reflexive closure of the reduction relation
 %%-----------------------------------------------------------
 
-implies : exp -> exp -> type.
-%mode implies +E1 -E2.
+stronger : exp -> exp -> type.
+%mode stronger +E1 -E2.
 
 % reduction rules
-imp/fst-pair : implies (fst (pair E1 E2)) E1
+str/fst-pair : stronger (fst (pair E1 E2)) E1
 		<- value E2
 		<- value E1.
-imp/snd-pair : implies (snd (pair E1 E2)) E2
+str/snd-pair : stronger (snd (pair E1 E2)) E2
 		<- value E2
 		<- value E1.
-imp/beta : implies (app (lam F) E) E'
+str/beta : stronger (app (lam F) E) E'
 	    <- id-exp (F E) E'
 	    <- value E.
 
 % congruence rules
-imp/z : implies z z.
-imp/s : implies (s E1) (s E2) <- implies E1 E2.
-imp/fst : implies (fst E1) (fst E2) <- implies E1 E2.
-imp/snd : implies (snd E1) (snd E2) <- implies E1 E2.
-imp/pair : implies (pair E1 E2) (pair E1' E2')
-	    <- implies E2 E2'
-	    <- implies E1 E1'.
-imp/lam : implies (lam F) (lam F).
-imp/app : implies (app E1 E2) (app E1' E2')
-	    <- implies E2 E2'
-	    <- implies E1 E1'.
+str/z : stronger z z.
+str/s : stronger (s E1) (s E2) <- stronger E1 E2.
+str/fst : stronger (fst E1) (fst E2) <- stronger E1 E2.
+str/snd : stronger (snd E1) (snd E2) <- stronger E1 E2.
+str/pair : stronger (pair E1 E2) (pair E1' E2')
+	    <- stronger E2 E2'
+	    <- stronger E1 E1'.
+str/lam : stronger (lam F) (lam F).
+str/app : stronger (app E1 E2) (app E1' E2')
+	    <- stronger E2 E2'
+	    <- stronger E1 E1'.
 
-% imp/trans : implies E1 E3
-% 	     <- implies E1 E2
-% 	     <- implies E2 E3.
-
-%worlds () (implies _ _).
-%terminates E (implies E _).
+%worlds () (stronger _ _).
+%terminates E (stronger E _).
 
 %%---------------------------------------------
 
-imp-refl : {E : exp} implies E E -> type.
-%mode imp-refl +E -IMPLIES.
+strong-refl : {E : exp} stronger E E -> type.
+%mode strong-refl +E -STRONGER.
 
-- : imp-refl z imp/z.
-- : imp-refl (s E) (imp/s D) <- imp-refl E D.
-- : imp-refl (fst E) (imp/fst D) <- imp-refl E D.
-- : imp-refl (snd E) (imp/snd D) <- imp-refl E D.
-- : imp-refl (lam F) imp/lam.
-- : imp-refl (pair E1 E2) (imp/pair D1 D2)
-     <- imp-refl E1 D1
-     <- imp-refl E2 D2.
-- : imp-refl (app E1 E2) (imp/app D1 D2)
-     <- imp-refl E1 D1
-     <- imp-refl E2 D2.
+- : strong-refl z str/z.
+- : strong-refl (s E) (str/s D) <- strong-refl E D.
+- : strong-refl (fst E) (str/fst D) <- strong-refl E D.
+- : strong-refl (snd E) (str/snd D) <- strong-refl E D.
+- : strong-refl (lam F) str/lam.
+- : strong-refl (pair E1 E2) (str/pair D1 D2)
+     <- strong-refl E1 D1
+     <- strong-refl E2 D2.
+- : strong-refl (app E1 E2) (str/app D1 D2)
+     <- strong-refl E1 D1
+     <- strong-refl E2 D2.
 
-%worlds () (imp-refl _ _).
-%total E (imp-refl E _).
+%worlds () (strong-refl _ _).
+%total E (strong-refl E _).
 
 %%-----------------------------------------------------
+%% A technical lemma, so that we can stop Twelf from
+%% using higher-order unification (e.g. F E = fst X)
+%%-----------------------------------------------------
 
-imp-eval-lemma:
+strong-eval-lemma:
 		 value E
 		 -> id-exp (F E) E'
 		 -> eval E' V
 		 -> eval (app (lam F) E) V
 		 -> type.
-%mode imp-eval-lemma +V +EQ +EV2 -EV.
+%mode strong-eval-lemma +V +EQ +EV2 -EV.
 
-- : imp-eval-lemma V id-exp/refl EV (eval/app EV ARG eval/lam)
+- : strong-eval-lemma V id-exp/refl EV (eval/app EV ARG eval/lam)
      <- eval/val V ARG.
 
-%worlds () (imp-eval-lemma _ _ _ _).
-%total {} (imp-eval-lemma _ _ _ _).
+%worlds () (strong-eval-lemma _ _ _ _).
+%total {} (strong-eval-lemma _ _ _ _).
 
 %%-------------------------------------------------
+%% E1 >= E2 and  eval E2 V implies eval E1 V
+%%-------------------------------------------------
 
-imp-eval : implies E1 E2 -> eval E2 V -> eval E1 V -> type.
-%mode imp-eval +IMP +EV2 -EV1.
+strong-eval : stronger E1 E2 -> eval E2 V -> eval E1 V -> type.
+%mode strong-eval +IMP +EV2 -EV1.
 
-- : imp-eval (imp/beta V EQ) EV2 GOAL
-     <- imp-eval-lemma V EQ EV2 GOAL.
+- : strong-eval (str/beta V EQ) EV2 GOAL
+     <- strong-eval-lemma V EQ EV2 GOAL.
 
-- : imp-eval (imp/fst-pair V1 V2) EV2 (eval/fst (eval/pair OUT EV2))
+- : strong-eval (str/fst-pair V1 V2) EV2 (eval/fst (eval/pair OUT EV2))
      <- eval/val V2 OUT.
 
-- : imp-eval (imp/snd-pair V1 V2) EV2 (eval/snd (eval/pair EV2 P2))
+- : strong-eval (str/snd-pair V1 V2) EV2 (eval/snd (eval/pair EV2 P2))
      <- eval/val V1 P2.
 
-- : imp-eval imp/z E E.
+- : strong-eval str/z E E.
 
-- : imp-eval (imp/s IMP) (eval/s D) (eval/s D2)
-     <- imp-eval IMP D D2.
+- : strong-eval (str/s IMP) (eval/s D) (eval/s D2)
+     <- strong-eval IMP D D2.
 
-- : imp-eval (imp/fst IMP) (eval/fst D) (eval/fst D2)
-     <- imp-eval IMP D D2.
+- : strong-eval (str/fst IMP) (eval/fst D) (eval/fst D2)
+     <- strong-eval IMP D D2.
 
-- : imp-eval (imp/snd IMP) (eval/snd D) (eval/snd D2)
-     <- imp-eval IMP D D2.
+- : strong-eval (str/snd IMP) (eval/snd D) (eval/snd D2)
+     <- strong-eval IMP D D2.
 
-- : imp-eval (imp/pair B A) (eval/pair D1 D2) (eval/pair D1' D2')
-     <- imp-eval A D1 D1'
-     <- imp-eval B D2 D2'.
+- : strong-eval (str/pair B A) (eval/pair D1 D2) (eval/pair D1' D2')
+     <- strong-eval A D1 D1'
+     <- strong-eval B D2 D2'.
 
-- : imp-eval imp/lam E E.
+- : strong-eval str/lam E E.
 
-- : imp-eval (imp/app B A) (eval/app RES2 ARG FUN) (eval/app RES2 ARG2 FUN2)
-     <- imp-eval B FUN FUN2
-     <- imp-eval A ARG ARG2.
+- : strong-eval (str/app B A) (eval/app RES2 ARG FUN) (eval/app RES2 ARG2 FUN2)
+     <- strong-eval B FUN FUN2
+     <- strong-eval A ARG ARG2.
 
-%worlds () (imp-eval _ _ _).
-%total I (imp-eval I _ _).
+%worlds () (strong-eval _ _ _).
+%total I (strong-eval I _ _).
 
 %%--------------------------------------------------------
 
-imp-ctx : {S : stack}
-	   implies E1 E2
+stronger-ctx : {S : stack}
+	   stronger E1 E2
 	   -> plug E1 S E1'
 	   -> plug E2 S E2'
-	   -> implies E1' E2'
+	   -> stronger E1' E2'
 	   -> type.
-%mode imp-ctx +S +IMP +P1 +P2 -IMP2.
+%mode stronger-ctx +S +IMP +P1 +P2 -IMP2.
 
-- : imp-ctx nil IMP plug/nil plug/nil IMP.
+- : stronger-ctx nil IMP plug/nil plug/nil IMP.
 
-- : imp-ctx (f-s , S) IMP (plug/s P1) (plug/s P2) LEMMA
-     <- imp-ctx S (imp/s IMP) P1 P2 LEMMA.
+- : stronger-ctx (f-s , S) IMP (plug/s P1) (plug/s P2) LEMMA
+     <- stronger-ctx S (str/s IMP) P1 P2 LEMMA.
 
-- : imp-ctx (f-fst , S) IMP (plug/fst P1) (plug/fst P2) LEMMA
-     <- imp-ctx S (imp/fst IMP) P1 P2 LEMMA.
+- : stronger-ctx (f-fst , S) IMP (plug/fst P1) (plug/fst P2) LEMMA
+     <- stronger-ctx S (str/fst IMP) P1 P2 LEMMA.
 
-- : imp-ctx (f-snd , S) IMP (plug/snd P1) (plug/snd P2) LEMMA
-     <- imp-ctx S (imp/snd IMP) P1 P2 LEMMA.
+- : stronger-ctx (f-snd , S) IMP (plug/snd P1) (plug/snd P2) LEMMA
+     <- stronger-ctx S (str/snd IMP) P1 P2 LEMMA.
 
-- : imp-ctx (f-pair1 E , S) IMP (plug/pair1 P1) (plug/pair1 P2) LEMMA
-     <- imp-refl E IMP2
-     <- imp-ctx S (imp/pair IMP IMP2) P1 P2 LEMMA.
+- : stronger-ctx (f-pair1 E , S) IMP (plug/pair1 P1) (plug/pair1 P2) LEMMA
+     <- strong-refl E IMP2
+     <- stronger-ctx S (str/pair IMP IMP2) P1 P2 LEMMA.
 
-- : imp-ctx (f-pair2 (V : value E) , S) IMP (plug/pair2 P1) (plug/pair2 P2)
+- : stronger-ctx (f-pair2 (V : value E) , S) IMP (plug/pair2 P1) (plug/pair2 P2)
      LEMMA
-     <- imp-refl E IMP2
-     <- imp-ctx S (imp/pair IMP2 IMP) P1 P2 LEMMA.
+     <- strong-refl E IMP2
+     <- stronger-ctx S (str/pair IMP2 IMP) P1 P2 LEMMA.
 
-- : imp-ctx (f-app1 E , S) IMP (plug/app1 P1) (plug/app1 P2) LEMMA
-     <- imp-refl E IMP2
-     <- imp-ctx S (imp/app IMP IMP2) P1 P2 LEMMA.
+- : stronger-ctx (f-app1 E , S) IMP (plug/app1 P1) (plug/app1 P2) LEMMA
+     <- strong-refl E IMP2
+     <- stronger-ctx S (str/app IMP IMP2) P1 P2 LEMMA.
 
-- : imp-ctx (f-app2 (V : value E) , S) IMP (plug/app2 P1) (plug/app2 P2) LEMMA
-     <- imp-refl E IMP2
-     <- imp-ctx S (imp/app IMP2 IMP) P1 P2 LEMMA.
+- : stronger-ctx (f-app2 (V : value E) , S) IMP (plug/app2 P1) (plug/app2 P2) LEMMA
+     <- strong-refl E IMP2
+     <- stronger-ctx S (str/app IMP2 IMP) P1 P2 LEMMA.
 
-%worlds () (imp-ctx _ _ _ _ _).
-%total S (imp-ctx S _ _ _ _).
+%worlds () (stronger-ctx _ _ _ _ _).
+%total S (stronger-ctx S _ _ _ _).
 
-%%--------------------------------------------------------
+%%------------------------------------------------------------------
+%% The invariant of the transitions:
+%% - if the end state evaluates then the starting state does so too.
+%%-----------------------------------------------------------------
+
+%% This could be a bit clearer (but of the same length)
+
+% inv2 : ST1 =AM=> ST2
+%        -> flat ST1 E1
+%        -> flat ST2 E2
+%        -> stronger E1 E2
+%        -> type.
+
+% %mode inv2 +STEP +FLAT1 +FLAT2 -STRONGER.
+
+% - : inv2 ev/z (flat/ev P1) (flat/ap P2) GOAL
+%      <- plug-eq P2 P1 EQ.
+
+% %worlds () (inv2 _ _ _ _).
+% %total {} (inv2 _ _ _ _).
+
+%%-----------------------------------------------------
 
 inv : ST1 =AM=> ST2
        -> flat ST1 E1
@@ -313,8 +335,8 @@ inv : ST1 =AM=> ST2
 
 -  : inv (ap/fst : ap (val/pair V1 V2) _ =AM=> _)
       (flat/ap (plug/fst P1)) (flat/ap P2) EV EV3
-      <- imp-ctx _ (imp/fst-pair V1 V2) P1 P2 GOAL
-      <- imp-eval GOAL EV EV3.
+      <- stronger-ctx _ (str/fst-pair V1 V2) P1 P2 GOAL
+      <- strong-eval GOAL EV EV3.
 
 - : inv ev/snd (flat/ev P1) (flat/ev (plug/snd P2)) EV EV2
      <- plug-eq P2 P1 EQ
@@ -326,8 +348,8 @@ inv : ST1 =AM=> ST2
 
 -  : inv (ap/snd : ap (val/pair V1 V2) _ =AM=> _)
       (flat/ap (plug/snd P1)) (flat/ap P2) EV EV3
-      <- imp-ctx _ (imp/snd-pair V1 V2) P1 P2 GOAL
-      <- imp-eval GOAL EV EV3.
+      <- stronger-ctx _ (str/snd-pair V1 V2) P1 P2 GOAL
+      <- strong-eval GOAL EV EV3.
 
 - : inv ev/pair1 (flat/ev P1) (flat/ev (plug/pair1 P2)) EV EV2
      <- plug-eq P2 P1 EQ
@@ -358,12 +380,14 @@ inv : ST1 =AM=> ST2
 
 - : inv (ap/app2 : ap (V : value E) _ =AM=> _)
      (flat/ap (plug/app2 P1)) (flat/ev P2) EV EV2
-     <- imp-ctx _ (imp/beta V id-exp/refl) P1 P2 GOAL
-     <- imp-eval GOAL EV EV2.
+     <- stronger-ctx _ (str/beta V id-exp/refl) P1 P2 GOAL
+     <- strong-eval GOAL EV EV2.
 
 %worlds () (inv _ _ _  _ _).
 %total STEP (inv STEP _ _ _ _).
 
+%%--------------------------------------------------
+%% Invariant on the many-step relation
 %%--------------------------------------------------
 
 inv-many : ST1 ===>+ ST2
@@ -386,7 +410,6 @@ inv-many : ST1 ===>+ ST2
 
 %worlds () (inv-many _ _ _  _ _).
 %total STEP (inv-many STEP _ _ _ _).
-
 
 %%----------------------------------------------------
 %% COMPLETENESS OF THE ABSTRACT MACHINE
