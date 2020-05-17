@@ -1,0 +1,259 @@
+%%-------------------------------------------
+%% Expressions
+
+exp : type.        %name exp E x.
+
+z : exp.
+s : exp -> exp.    %prefix 20 s.
+ifz : exp -> exp -> (exp -> exp) -> exp.
+lam : (exp -> exp) -> exp.
+app : exp -> exp -> exp.
+fix : (exp -> exp) -> exp.
+% non-deterministic choice
+amb : exp -> exp -> exp.         %infix left 10 amb.   
+
+%%-------------------------------------------
+%% Evaluation of expressions
+
+eval : exp -> exp -> type.
+
+%mode eval +E -V.
+
+eval/z : eval z z.
+
+eval/s : eval (s E) (s V)
+	  <- eval E V.
+
+eval/ifz-z : eval (ifz E1 E2 E3) V
+	      <- eval E1 z
+	      <- eval E2 V.
+
+eval/ifz-s : eval (ifz E1 E2 E3) V
+	      <- eval E1 (s V1)
+	      <- eval (E3 V1) V.
+
+eval/lam : eval (lam F) (lam F).
+
+eval/app : eval (app E1 E2) V
+	    <- eval E1 (lam F)
+	    <- eval E2 V2
+	    <- eval (F V2) V.
+
+eval/fix : eval (fix E) V
+	    <- eval (E (fix E)) V.
+
+eval/amb1 : eval (E1 amb E2) V
+	     <- eval E1 V.
+
+eval/amb2 : eval (E1 amb E2) V
+	     <- eval E2 V.
+
+%%-------------------------------------------
+%% Example queries
+
+%query 1 *
+eval z V.
+
+%query 1 *
+eval (s z) V.
+
+%query 1 *
+eval (ifz z (s z) ([x] z)) V.
+
+%query 1 *
+eval (ifz (s z) (s z) ([x] z)) V.
+
+%query 1 *
+eval (lam F) V.
+
+%query 1 *
+eval (app (lam ([x] x)) (s z)) V.
+
+%query 3 3
+eval E E.
+
+%%-------------------------------------------------------------------
+%% Some readability shortcuts
+
+app2 : exp -> exp -> exp -> exp = [F][E1][E2] app (app F E1) E2.
+
+0 : exp = z.
+1 : exp = s z.
+2 : exp = s s z.
+3 : exp = s s s z.
+4 : exp = s s s s z.
+5 : exp = s s s s s z.
+
+%%-------------------------------------------------------------------
+%% Some examples arithmetic functions defined using ifz and fix
+
+% double n = 2 * n
+% double = FIX (\dbl -> [n] ifz n 0 ([m] s s (dbl m)))
+double : exp = fix ([dbl] (lam ([n] ifz n z ([m] s s (app dbl m))))).
+
+%query 1 *
+eval (app double (s z)) V.
+
+%query 1 *
+eval (app double (app double (s z))) V.
+
+
+%%-------------------------------------------------------------------
+% add n m = n + m
+% add = [n] [m] n + m = [n] [m] ifz m n ([m'] s (add n m')
+add : exp = fix ([add] (lam ([n] (lam [m]
+				    ifz m n ([m'] s (app2 add n m')))))).
+%query 1 *
+eval (app2 add 2 3) V.
+
+%%-------------------------------------------------------------------
+% sub n m = n - m
+
+sub : exp = fix ([sub] (lam [n] (lam [m]
+				   ifz n 0
+				   ([n']
+				      ifz m n ([m'] app2 sub n' m'))))).
+
+%query 1 *
+eval (app2 sub 0 5) 0.
+
+%query 1 *
+eval (app2 sub 5 0) 5.
+
+%query 1 *
+eval (app2 sub 5 2) 3.
+
+%query 1 *
+eval (app2 sub 3 2) 1.
+
+%%-------------------------------------------------------------------
+% mult n m = n * m
+% mult = [n] [m] n * m = [n] [m] ifz m z ([m'] n + (mult n m'))
+
+mult : exp = fix ([mult] (lam ([n] (lam [m]
+				    ifz m z ([m'] (app2 add n (app2 mult n m'))))))).
+
+%query 1 *
+eval (app2 mult 2 3) V.
+
+%query 1 *
+eval (app2 mult 3 3) V.
+
+%%-------------------------------------------------------------------
+%% n <= m    : 1 == true, 0 == false
+
+le : exp = fix ([le] (lam [n] (lam [m]
+				 ifz n 1 ([n'] ifz m 0 ([m'] (app2 le n' m')))))).
+
+%query 1 *
+eval (app2 le z z) 1.
+
+%query 1 *
+eval (app2 le 1 0) 0.
+
+%query 1 *
+eval (app2 le 1 1) 1.
+
+%query 1 *
+eval (app2 le 4 5) 1.
+
+%query 1 *
+eval (app2 le 5 4) 0.
+
+%%----------------------------------------------------------------------
+%% n < m
+
+lt : exp = fix ([lt] (lam [n] (lam [m]
+				 ifz n
+				 (ifz m 0 ([m'] 1))
+				 ([n'] ifz m 0 ([m'] (app2 lt n' m')))))).
+
+%query 1 *
+eval (app2 lt z z) 0.
+
+%query 1 *
+eval (app2 lt 1 0) 0.
+
+%query 1 *
+eval (app2 lt 1 1) 0.
+
+%query 1 *
+eval (app2 lt 4 5) 1.
+
+%query 1 *
+eval (app2 lt 5 4) 0.
+
+%%-------------------------------------------------------------------
+%% n is divisible by m (we know that n <= m and n > 1)
+
+%% mod n m =
+%%    n              if n < m
+%%    mod (n-m) m    if n >= m
+
+mod : exp = fix ([mod] lam ([n] (lam [m]
+				   %% if n < m
+				   ifz (app2 lt n m)
+				   (app2 mod (app2 sub n m) m)
+				   ([_] n)))).
+
+
+%query 1 *
+eval (app2 mod 4 2) 0.
+
+%query 1 *
+eval (app2 mod 4 3) 1.
+
+%query 1 *
+eval (app2 mod 2 2) 0.
+
+%query 1 *
+eval (app2 mod (s 5) 2) 0.
+
+%query 1 *
+eval (app2 mod (s 5) 3) 0.
+
+%query 1 *
+eval (app2 mod (s 5) 5) 1.
+
+%%---------------------------------
+%% Amb examples
+
+%query 2 2
+(eval (1 amb 2) V).
+
+%% all natural numbers
+% E = 0 | S E
+
+nats : exp = fix ([REC] z amb (s REC)).
+
+%query * 5
+(eval nats V).
+
+%% Composite numbers
+composite : exp = app2 mult (s s nats) (s s nats).
+
+%query * 10
+(eval composite V).
+
+%% prime numbers
+%% n <= m
+%% n mod m == 0
+
+sieve : exp = fix ([sieve] lam ([n] (lam [m]
+			  %% if n <= m
+			  ifz (app2 sub n m)
+		       %% yes => no divisors were found, n is prime
+			  (n amb (app2 sieve (s s n) 3))
+		       %% no => we're still looking
+			  ([_]
+			     ifz (app2 mod n m)
+			     % yes => found a divisor
+			     (app2 sieve (s s n) 3)
+			     % no, look for others
+			     ([_] app2 sieve n (s s m)))))).
+
+primes : exp = 2 amb 3 amb (app2 sieve 5 3).
+
+%% the first 25 primes
+%query * 25
+(eval primes V).

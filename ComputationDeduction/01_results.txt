@@ -1,0 +1,50 @@
+---------- Solution 1 ----------
+V = s s z.
+---------- Solution 2 ----------
+V = s s s z.
+---------- Solution 3 ----------
+V = s s s s s z.
+---------- Solution 4 ----------
+V = s s s s s s s z.
+---------- Solution 5 ----------
+V = s s s s s s s s s s s z.
+---------- Solution 6 ----------
+V = s s s s s s s s s s s s s z.
+---------- Solution 7 ----------
+V = s s s s s s s s s s s s s s s s s z.
+---------- Solution 8 ----------
+V = s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 9 ----------
+V = s s s s s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 10 ----------
+V = s s s s s s s s s s s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 11 ----------
+V = s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 12 ----------
+V = s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 13 ----------
+V =
+   s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s 
+s
+      s s z.
+---------- Solution 14 ----------
+V =
+   s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s 
+s
+      s s s s z.
+---------- Solution 15 ----------
+V =
+   s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s 
+s
+      s s s s s s s s z.
+---------- Solution 16 ----------
+V =
+   s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s 
+s
+      s s s s s s s s s s s s s s z.
+---------- Solution 17 ----------
+V =
+   s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s 
+s
+      s s s s s s s s s s s s s s s s s s s s z.
+----
