@@ -1,0 +1,26 @@
+---------- Solution 1 ----------
+V1 = s s z.
+---------- Solution 2 ----------
+V1 = s s s z.
+---------- Solution 3 ----------
+V1 = s s s s s z.
+---------- Solution 4 ----------
+V1 = s s s s s s s z.
+---------- Solution 5 ----------
+V1 = s s s s s s s s s s s z.
+---------- Solution 6 ----------
+V1 = s s s s s s s s s s s s s z.
+---------- Solution 7 ----------
+V1 = s s s s s s s s s s s s s s s s s z.
+---------- Solution 8 ----------
+V1 = s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 9 ----------
+V1 = s s s s s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 10 ----------
+V1 = s s s s s s s s s s s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 11 ----------
+V1 = s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s z.
+---------- Solution 12 ----------
+V1 = s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s 
+z.
+----

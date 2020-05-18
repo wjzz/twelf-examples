@@ -255,5 +255,5 @@ sieve : exp = fix ([sieve] lam ([n] (lam [m]
 primes : exp = 2 amb 3 amb (app2 sieve 5 3).
 
 %% the first 25 primes
-%query * 25
+%query * 15
 (eval primes V).
