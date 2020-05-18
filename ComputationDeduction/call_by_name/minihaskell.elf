@@ -1,0 +1,193 @@
+%%-------------------------------------------
+%% Expressions
+
+exp : type.        %name exp E x.
+
+% nats
+z : exp.
+s : exp -> exp.    %prefix 20 s.
+ifz : exp -> exp -> (exp -> exp) -> exp.
+% core lambda 
+lam : (exp -> exp) -> exp.
+app : exp -> exp -> exp.
+fix : (exp -> exp) -> exp.
+% lists
+nil : exp.
+; : exp -> exp -> exp. %infix right 10 ;.
+ifnil : exp -> exp -> (exp -> exp -> exp) -> exp.
+% pairs
+pair : exp -> exp -> exp.
+fst : exp -> exp.
+snd : exp -> exp.
+% helpers
+ifz-v : exp -> exp -> (exp -> exp) -> exp.
+ifnil-v : exp -> exp -> (exp -> exp -> exp) -> exp.
+% force operator
+! : exp -> exp.         % prefix 20 !.
+
+%%-------------------------------------------
+%% Evaluation of expressions using the normal order
+
+eval : exp -> exp -> type.
+force : exp -> exp -> type.
+%mode eval +E -V.
+%mode force +E -V.
+
+eval/z : eval z z.
+
+eval/s : eval (s E) (s E).
+
+eval/ifz : eval (ifz E1 E2 E3) V2
+	    <- eval E1 V
+	    <- eval (ifz-v V E2 E3) V2.
+
+eval/ifv-z : eval (ifz-v z E2 E3) V
+	      <- eval E2 V.
+
+eval/ifv-s : eval (ifz-v (s E) E2 E3) V
+	      <- eval (E3 E) V.
+
+eval/lam : eval (lam F) (lam F).
+
+eval/app : eval (app E1 E2) V
+	    <- eval E1 (lam F)
+	    <- eval (F E2) V.
+
+eval/fix : eval (fix F) V
+	    <- eval (F (fix F)) V.
+
+eval/nil : eval nil nil.
+
+eval/cons : eval (E1 ; E2) (E1 ; E2).
+
+eval/ifnil : eval (ifnil E1 E2 E3) V
+	      <- eval E1 V1
+	      <- eval (ifnil-v V1 E2 E3) V.
+
+eval/ifnilv-nil : eval (ifnil-v nil E2 E3) V
+		   <- eval E2 V.
+
+eval/ifnilv-cons : eval (ifnil-v (V1 ; V2) E2 E3) V
+		    <- eval (E3 V1 V2) V.
+
+eval/pair : eval (pair E1 E2) (pair E1 E2).
+
+eval/fst : eval (fst E) V1
+	    <- eval E (pair E1 E2)
+	    <- eval E1 V1.
+
+eval/snd : eval (snd E) V2
+	    <- eval E (pair E1 E2)
+	    <- eval E2 V2.
+
+eval/force: eval (! E) W
+	     <- eval E V
+	     <- force V W.
+
+force/z : force z z.
+force/s : force (s E) (s V)
+	   <- eval (! E) V.
+force/lam : force (lam F) (lam F).
+force/nil : force nil nil.
+force/cons : force (E1 ; E2) (V1 ; V2)
+	      <- eval (! E1) V1
+	      <- eval (! E2) V2.
+force/pair : force (pair E1 E2) (pair V1 V2)
+	      <- eval (! E1) V1
+	      <- eval (! E2) V2.
+
+%%---------------------------------
+%% Examples
+
+%query * 1 eval z V.
+
+%query * 1 eval (s z) V.
+
+%query * 1 eval (s (fix [rec] rec)) V.
+
+%query * 1 eval (z ; z) V.
+
+%%---------------------------------
+%% Values
+
+value : exp -> type.
+
+val/z : value z.
+val/s : value (s E).
+val/lam : value (lam E).
+val/nil : value nil.
+val/cons : value (E1 ; E2).
+val/pair : value (pair E1 E2).
+
+%%--------------------------------------------
+%% Metatheorem: we always evaluate to a value
+
+eval-val : eval E V -> value V -> type.
+%mode eval-val +E -V.
+
+- : eval-val eval/z val/z.
+- : eval-val eval/s val/s.
+- : eval-val (eval/ifz D2 D1) REC
+     <- eval-val D1 REC.
+- : eval-val (eval/ifv-z D) REC
+     <- eval-val D REC.
+- : eval-val (eval/ifv-s D) REC
+     <- eval-val D REC.
+- : eval-val eval/lam val/lam.
+- : eval-val (eval/app D2 D1) REC
+     <- eval-val D2 REC.
+- : eval-val (eval/fix D) REC
+     <- eval-val D REC.
+- : eval-val eval/nil val/nil.
+- : eval-val eval/cons val/cons.
+- : eval-val (eval/ifnil D2 D1) REC
+     <- eval-val D2 REC.
+- : eval-val (eval/ifnilv-nil D) REC
+     <- eval-val D REC.
+- : eval-val (eval/ifnilv-cons D) REC
+     <- eval-val D REC.
+- : eval-val eval/pair val/pair.
+- : eval-val (eval/fst D2 D1) REC
+     <- eval-val D2 REC.
+- : eval-val (eval/snd D2 D1) REC
+     <- eval-val D2 REC.
+
+%worlds () (eval-val _ _).
+%% %total D (eval-val D _).         % doesn't work with force
+
+%%-----------------------------------------------
+%% Some examples of laziness
+
+repeat = lam ([n] fix ([repeat] n ; repeat)).
+
+%query * 1 (eval repeat V).               % already a value
+%query * 1 (eval (app repeat z) V).       % z ; [...]       
+
+% lazy evaluation
+%query * 1 (eval (app (lam [x] x) z ; app (lam [x] x) (s z)) V).
+% forced 
+%query * 1 (eval (! (app (lam [x] x) z ; app (lam [x] x) (s z))) V).
+
+app2 : exp -> exp -> exp -> exp = [F] [A] [B] app (app F A) B.
+
+take = fix ([take]
+	      lam ([n]
+		     lam ([lst]
+			    ifz n nil
+			    ([n-1]
+			       ifnil lst nil
+			       ([hd] [tl]
+				  hd ; app2 take n-1 tl))))).
+
+zeros : exp = app repeat z.
+ex : exp = z ; s z ; s s z ; s s s z ; nil.
+
+%query * 1 (eval (! (app2 take (s s s s s s z) ex)) V).
+%query * 1 (eval (! (ifz (s s z) nil ([m] m ; z ; nil))) V).
+%query * 1 (eval (! (ifnil ex z ([hd][tl] hd ; tl))) V).
+
+%query * 1 (eval (app2 take z zeros) V).
+%query * 1 (eval (! (app2 take (s z) zeros)) V).
+%query * 1 (eval (! (app2 take (s (s z)) zeros)) V).
+
+				  
