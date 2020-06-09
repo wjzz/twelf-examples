@@ -1,0 +1,75 @@
+%% Sequent calculus for the intuitionistic propositional logic.
+%% We follow the encoding approach proposed by Frank Pfenning [95,00]
+
+%% Atoms
+
+nat : type.
+z : nat.
+s : nat -> nat.
+
+%% Propositional formulas
+
+prop : type.
+false : prop.
+atom : nat -> prop.
+/\ : prop -> prop -> prop.   %infix right 10 /\.
+\/ : prop -> prop -> prop.   %infix right 9 \/.
+=> : prop -> prop -> prop.   %infix right 8 =>.
+
+%% Rules of inference
+
+hyp : prop -> type.
+conl : prop -> type.
+
+%% AXIOM (for a calculus with weaker axiom rule, see logic_weaker_axion.elf)
+
+der-ax : hyp P -> conl P.
+
+%% AND
+
+der-and-l : (hyp P -> hyp Q -> conl R)
+	     -> (hyp (P /\ Q) -> conl R).
+
+der-and-r : conl P -> conl Q -> conl (P /\ Q).
+
+%% OR
+
+der-or-l : (hyp P -> conl R)
+	    -> (hyp Q -> conl R)
+	    -> hyp (P \/ Q) -> conl R.
+					   
+der-or-r1 : conl P -> conl (P \/ Q).
+der-or-r2 : conl Q -> conl (P \/ Q).
+
+%% IMP
+
+der-imp-l :
+	     conl P
+	     -> (hyp Q -> conl R)
+	     -> hyp (P => Q) -> conl R.
+
+der-imp-r : (hyp P -> conl Q) -> conl (P => Q).
+
+%% FALSE
+
+der-false-l : hyp false -> conl P.
+
+%% no right rules for false!
+
+%%-----------------------------------------------------
+%% Example derivations
+
+ex1 : {P : prop} conl (P => P)
+       = [_] der-imp-r ([x] der-ax x).
+
+
+%%----------------
+
+ex2 : {P:prop} {Q:prop} conl (P /\ Q => Q /\ P)
+       = [P][Q] der-imp-r ([F: hyp (P /\ Q)]
+			     der-and-l
+			     ([H1][H2] der-and-r (der-ax H2) (der-ax H1))
+			     F).
+
+%solve D : 
+conl (atom z /\ (atom (s z)) => atom (s z) /\ atom z).

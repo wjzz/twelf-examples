@@ -1,0 +1,92 @@
+%% In this file we weaken the axiom rule to apply only to atom
+%% and then we prove that the stronger axiom rule is admissible.
+
+%% This is sometimes called 'identity expansion' and could be
+%% compared to the eta rule in lambda calculus.
+
+%% Atoms
+
+nat : type.
+z : nat.
+s : nat -> nat.
+
+%% Propositional formulas
+
+prop : type.
+false : prop.
+atom : nat -> prop.
+/\ : prop -> prop -> prop.   %infix right 10 /\.
+\/ : prop -> prop -> prop.   %infix right 9 \/.
+=> : prop -> prop -> prop.   %infix right 8 =>.
+
+%% Rules of inference
+
+hyp : prop -> type.
+conl : prop -> type.
+
+%% axiom
+
+der-ax : hyp (atom A) -> conl (atom A).
+
+%% AND
+der-and-l : (hyp P -> hyp Q -> conl R)
+	     -> (hyp (P /\ Q) -> conl R).
+
+der-and-r : conl P -> conl Q -> conl (P /\ Q).
+
+%% OR
+der-or-l : (hyp P -> conl R)
+	    -> (hyp Q -> conl R)
+	    -> hyp (P \/ Q) -> conl R.
+					   
+der-or-r1 : conl P -> conl (P \/ Q).
+der-or-r2 : conl Q -> conl (P \/ Q).
+
+%% IMP
+der-imp-l :
+	     conl P
+	     -> (hyp Q -> conl R)
+	     -> hyp (P => Q) -> conl R.
+
+der-imp-r : (hyp P -> conl Q) -> conl (P => Q).
+
+%% FALSE
+der-false-l : hyp false -> conl P.
+
+%block der_block : some {P:prop} block {a:hyp P}.
+%worlds (der_block) (hyp P) (conl P).
+
+%%-----------------------------------------------------
+%% Identity expansion
+
+identity : {P: prop} (hyp P -> conl P) -> type.
+
+%mode identity +P -F.
+
+- : identity (atom A) ([H] (der-ax H)).
+
+- : identity false ([H] (der-false-l H)).
+
+- : identity (P /\ Q) ([H: hyp (P /\ Q)]
+			 der-and-r
+			 (der-and-l ([H][_] FP H) H)
+			 (der-and-l ([_][H] FQ H) H))
+     <- identity P FP
+     <- identity Q FQ.
+
+- : identity (P => Q) ([H: hyp (P => Q)]
+			 der-imp-r
+			 ([HP] der-imp-l (FP HP) FQ H))
+     <- identity P FP
+     <- identity Q FQ.
+
+- : identity (P \/ Q) ([H: hyp (P \/ Q)]
+			 der-or-l
+			 ([HP] der-or-r1 (FP HP))
+			 ([HQ] der-or-r2 (FQ HQ))
+			 H)
+     <- identity P FP
+     <- identity Q FQ.
+
+%worlds (der_block) (identity _ _).
+%total P (identity P _ ).
