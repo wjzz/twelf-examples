@@ -1,0 +1,107 @@
+%% Admissibility of cut
+
+%% The type has a nice structure:
+%% (hyp P -> conl C) ==> (conl P -> conl C)
+
+cut : {P: prop}
+       conl P
+       -> (hyp P -> conl C)
+       -> conl C
+       -> type.
+	  
+%mode cut +P +P1 +P2 -C.
+
+%% Base cases
+
+- : cut _ (der-ax HP) PC (PC HP).
+
+- : cut _ (der-false-l HFalse) PC (der-false-l HFalse).
+
+%% Left rule on the left
+
+- : cut _ (der-imp-l AA BC AB) CD (der-imp-l AA BD AB)
+     <- {BB: hyp B} cut _ (BC BB) CD (BD BB).
+
+- : cut _ (der-or-l PC QC PQ) CD (der-or-l PD QD PQ)
+     <- ({PP: hyp P} cut _ (PC PP) CD (PD PP))
+     <- ({QQ: hyp Q} cut _ (QC QQ) CD (QD QQ)).
+
+- : cut _ (der-and-l1 PC PQ) CD (der-and-l1 PD PQ)
+     <- {PP : hyp P} cut _ (PC PP) CD (PD PP).
+
+- : cut _ (der-and-l2 QC PQ) CD (der-and-l2 QD PQ)
+     <- {QQ : hyp Q} cut _ (QC QQ) CD (QD QQ).
+
+%% Right rule on the right
+
+- : cut _ AA ([H] der-and-r (PP H) (QQ H)) (der-and-r G1 G2)
+     <- cut _ AA PP G1
+     <- cut _ AA QQ G2.
+
+- : cut _ AA ([H] der-or-r1 (PP H)) (der-or-r1 G)
+     <- cut _ AA PP G.
+
+- : cut _ AA ([H] der-or-r2 (PP H)) (der-or-r2 G)
+     <- cut _ AA PP G.
+
+- : cut A AA ([H : hyp A] der-imp-r (PP H))
+    (der-imp-r GOAL1 : conl (P => Q))
+     <- {H1 : hyp P} cut A AA ([H] PP H H1) (GOAL1 H1).
+
+%% Left rule on the right and we don't touch A
+
+- : cut _ AA ([_: hyp A] der-ax G) (der-ax G).
+
+- : cut _ AA ([HA: hyp A] der-ax HA) AA.
+
+- : cut _ AA ([HA: hyp A] der-false-l HFalse) (der-false-l HFalse).
+
+- : cut _ (AA : conl A)
+     ([HA: hyp A]
+	der-imp-l (PP HA : conl P) (QC HA : hyp Q -> conl C) HPQ)
+     (der-imp-l PP' LEMMA HPQ)
+   <- cut _ AA PP PP'
+   <- {HQ : hyp Q} cut _ AA ([HA] QC HA HQ) (LEMMA HQ).
+
+- : cut _ AA ([HA: hyp A] der-and-l1 (PR HA: hyp P -> conl R) P/\Q)
+     (der-and-l1 PR' P/\Q)
+     <- {PP : hyp P} cut _ AA ([HA] PR HA PP) (PR' PP).
+
+- : cut _ AA ([HA: hyp A] der-and-l2 (PR HA: hyp P -> conl R) P/\Q)
+     (der-and-l2 PR' P/\Q)
+     <- {PP : hyp P} cut _ AA ([HA] PR HA PP) (PR' PP).
+
+- : cut _ AA ([HA: hyp A] der-or-l (PR HA) (QR HA) P\/Q)
+     (der-or-l PR' QR' P\/Q)
+   <- ({PP : hyp P} cut _ AA ([HA] PR HA PP) (PR' PP))
+   <- ({QQ : hyp Q} cut _ AA ([HA] QR HA QQ) (QR' QQ)).
+
+%% Principal cases
+
+- : cut (P \/ Q) (der-or-r1 PP) ([H] der-or-l (PC H) (QC H) H) GOAL
+     <- ({HP: hyp P} cut (P \/ Q) (der-or-r1 PP) ([H] PC H HP) (PC' HP))
+     <- cut P PP PC' GOAL.
+
+- : cut (P \/ Q) (der-or-r2 QQ) ([H] der-or-l (PC H) (QC H) H) GOAL
+     <- ({HQ: hyp Q} cut (P \/ Q) (der-or-r2 QQ) ([H] QC H HQ) (QC' HQ))
+     <- cut Q QQ QC' GOAL.
+
+- : cut (P /\ Q) (der-and-r PP QQ)
+     ([H: hyp (P /\ Q)] der-and-l1 (PC H) H) GOAL
+   <- ({HP: hyp P} cut (P /\ Q) (der-and-r PP QQ) ([H] PC H HP) (PC' HP))
+   <- cut P PP PC' GOAL.
+
+- : cut (P /\ Q) (der-and-r PP QQ)
+     ([H: hyp (P /\ Q)] der-and-l2 (QC H) H) GOAL
+   <- ({HQ: hyp Q} cut (P /\ Q) (der-and-r PP QQ) ([H] QC H HQ) (QC' HQ))
+   <- cut Q QQ QC' GOAL.
+
+- : cut (P => Q) (der-imp-r P=>Q)
+     ([H:hyp (P => Q)] der-imp-l (PP H) (QC H) H) GOAL
+   <- cut (P => Q) (der-imp-r P=>Q) PP PP'
+   <- cut P PP' P=>Q QQ
+   <- ({HQ: hyp Q} cut (P => Q) (der-imp-r P=>Q) ([H] QC H HQ) (QC' HQ))
+   <- cut Q QQ QC' GOAL.
+
+%worlds (der_block) (cut _ _ _ _).
+%total {P D D2} (cut P D D2 _).

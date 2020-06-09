@@ -21,16 +21,23 @@ atom : nat -> prop.
 hyp : prop -> type.
 conl : prop -> type.
 
+%% %mode hyp +P.
+%% %mode conl +P.
+
 %% AXIOM (for a calculus with weaker axiom rule, see logic_weaker_axion.elf)
 
 der-ax : hyp P -> conl P.
 
 %% AND
 
-der-and-l : (hyp P -> hyp Q -> conl R)
+der-and-l1 : (hyp P -> conl R)
+	     -> (hyp (P /\ Q) -> conl R).
+
+der-and-l2 : (hyp Q -> conl R)
 	     -> (hyp (P /\ Q) -> conl R).
 
 der-and-r : conl P -> conl Q -> conl (P /\ Q).
+
 
 %% OR
 
@@ -56,6 +63,9 @@ der-false-l : hyp false -> conl P.
 
 %% no right rules for false!
 
+%block der_block : some {P:prop} block {a:hyp P}.
+%worlds (der_block) (hyp P) (conl P).
+
 %%-----------------------------------------------------
 %% Example derivations
 
@@ -65,11 +75,12 @@ ex1 : {P : prop} conl (P => P)
 
 %%----------------
 
-ex2 : {P:prop} {Q:prop} conl (P /\ Q => Q /\ P)
-       = [P][Q] der-imp-r ([F: hyp (P /\ Q)]
-			     der-and-l
-			     ([H1][H2] der-and-r (der-ax H2) (der-ax H1))
-			     F).
+% ex2 : {P:prop} {Q:prop} conl (P /\ Q => Q /\ P)
+%        = [P][Q] der-imp-r ([F: hyp (P /\ Q)]
+% 			     der-and-l
+% 			     ([H1][H2] der-and-r (der-ax H2) (der-ax H1))
+% 			     F).
 
-%solve D : 
-conl (atom z /\ (atom (s z)) => atom (s z) /\ atom z).
+%% This hangs the interpreter
+% %solve D : 
+% conl (atom z /\ (atom (s z)) => atom (s z) /\ atom z).
